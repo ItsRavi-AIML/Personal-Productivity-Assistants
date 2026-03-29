@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXUS — Instant Summary</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050508;--surface:#0d0d14;--surface2:#111118;--surface3:#16161f;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --accent:#7c6bff;--accent2:#00d4aa;--accent3:#ff6b6b;--accent4:#f5a623;--accent5:#a78bfa;
+  --text:#f0eeff;--muted:rgba(240,238,255,.45);--muted2:rgba(240,238,255,.22);
+  --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --hdr:56px;--sb:256px;--right:288px;
+}
+body.light{
+  --bg:#f5f4ff;--surface:#ffffff;--surface2:#f0eeff;--surface3:#e8e6ff;
+  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.13);
+  --text:#1a1830;--muted:rgba(26,24,48,.5);--muted2:rgba(26,24,48,.25);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);cursor:none;transition:background .4s,color .4s;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.022;pointer-events:none;z-index:9997;}
+
+/* CURSOR */
+#cur{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent3);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;}
+#cur-r{position:fixed;top:0;left:0;width:28px;height:28px;border:1.5px solid rgba(255,107,107,.45);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .25s,height .25s,border-color .25s;}
+body:has(button:hover) #cur{width:13px;height:13px;background:var(--accent);}
+body:has(button:hover) #cur-r{width:38px;height:38px;border-color:var(--accent);}
+body.light #cur{background:#1a1830;}
+body.light:has(button:hover) #cur{background:var(--accent);}
+body.light #cur-r{border-color:rgba(26,24,48,.35);}
+
+/* APP */
+.app{display:grid;grid-template-rows:var(--hdr) 1fr;grid-template-columns:var(--sb) 1fr var(--right);height:100vh;}
+
+/* HEADER */
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);z-index:300;}
+.h-logo{font-family:var(--font-head);font-size:1.2rem;font-weight:800;letter-spacing:.12em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;cursor:none;}
+.h-nav{display:flex;gap:3px;}
+.hn-btn{padding:6px 13px;border-radius:9px;border:1px solid transparent;background:transparent;color:var(--muted);font-family:var(--font-head);font-size:.72rem;font-weight:700;letter-spacing:.05em;cursor:none;transition:all .2s;}
+.hn-btn.active{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.3);color:var(--accent3);}
+.hn-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
+.h-right{display:flex;align-items:center;gap:8px;}
+.back-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:.75rem;text-decoration:none;cursor:none;transition:all .2s;}
+.back-btn:hover{color:var(--text);border-color:rgba(124,107,255,.3);}
+.gen-all-btn{padding:7px 16px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--accent3),#cc3333);color:#fff;font-family:var(--font-head);font-size:.75rem;font-weight:700;cursor:none;position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;}
+.gen-all-btn:hover{transform:scale(1.05);box-shadow:0 6px 22px rgba(255,107,107,.35);}
+.gen-all-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),var(--accent3));opacity:0;transition:opacity .35s;}
+.gen-all-btn:hover::before{opacity:1;}
+.gen-all-btn span{position:relative;z-index:1;}
+
+/* SIDEBAR */
+.sidebar{grid-column:1;grid-row:2;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;animation:slideL .4s ease both;}
+@keyframes slideL{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:translateX(0);}}
+.sb-top{padding:14px;}
+.upload-btn{width:100%;padding:10px 14px;border-radius:12px;border:1.5px dashed rgba(255,107,107,.4);background:rgba(255,107,107,.05);color:var(--accent3);cursor:none;display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-head);font-size:.78rem;font-weight:700;transition:all .25s;}
+.upload-btn:hover{background:rgba(255,107,107,.1);border-color:var(--accent3);transform:scale(1.02);}
+.ft-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:7px;}
+.ft{font-size:.56rem;padding:2px 6px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);letter-spacing:.05em;text-transform:uppercase;}
+.sb-sec{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted2);font-weight:600;padding:10px 14px 5px;display:flex;align-items:center;justify-content:space-between;}
+.sb-cnt{color:var(--accent3);font-family:var(--font-head);font-size:.75rem;font-weight:800;}
+.sel-all-btn{font-size:.6rem;color:var(--accent);cursor:none;background:none;border:none;font-family:var(--font-body);transition:color .2s;}
+.sel-all-btn:hover{color:var(--text);}
+
+/* File list */
+.f-list{flex:1;overflow-y:auto;padding:0 8px 10px;}
+.f-list::-webkit-scrollbar{width:2px;}
+.f-list::-webkit-scrollbar-thumb{background:rgba(255,107,107,.2);border-radius:2px;}
+.f-item{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:10px;cursor:none;transition:all .2s;margin-bottom:2px;position:relative;}
+.f-item:hover{background:var(--surface2);}
+.f-item.sel{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);}
+.f-chk{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:.55rem;}
+.f-item.sel .f-chk{background:var(--accent3);border-color:var(--accent3);color:#fff;}
+.f-item.sel .f-chk::after{content:'✓';}
+.f-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;}
+.f-meta{flex:1;min-width:0;}
+.f-name{font-size:.74rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.f-sz{font-size:.58rem;color:var(--muted);margin-top:1px;}
+.f-del{width:16px;height:16px;border-radius:50%;border:none;background:transparent;color:var(--muted2);cursor:none;opacity:0;font-size:.6rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;}
+.f-item:hover .f-del{opacity:1;}
+.f-del:hover{color:var(--accent3);}
+.empty-sb{padding:20px 12px;text-align:center;}
+.esb-ico{font-size:1.6rem;opacity:.3;margin-bottom:7px;}
+.esb-txt{font-size:.72rem;color:var(--muted);line-height:1.6;}
+
+/* Compression slider */
+.slider-wrap{padding:12px 14px;border-top:1px solid var(--border);}
+.sl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sl-lbl{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:600;}
+.sl-val{font-family:var(--font-head);font-size:.75rem;font-weight:800;color:var(--accent3);}
+.sl-labels{display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted2);margin-bottom:5px;}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:100px;background:linear-gradient(90deg,var(--accent3) var(--pct,40%),var(--surface3) var(--pct,40%));outline:none;cursor:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent3);cursor:none;border:2px solid var(--surface);box-shadow:0 2px 8px rgba(255,107,107,.4);transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3);}
+.sl-mode-lbl{text-align:center;font-family:var(--font-head);font-size:.72rem;font-weight:700;color:var(--accent3);margin-top:6px;}
+
+/* Mode tabs */
+.mode-tabs{padding:10px 14px 0;display:flex;gap:4px;}
+.m-tab{flex:1;padding:7px 4px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:var(--font-head);font-size:.64rem;font-weight:700;cursor:none;transition:all .2s;text-align:center;}
+.m-tab.active{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.3);color:var(--accent3);}
+.m-tab:hover:not(.active){background:var(--surface3);color:var(--text);}
+
+/* CENTER */
+.main-col{grid-column:2;grid-row:2;display:flex;flex-direction:column;overflow:hidden;position:relative;animation:fadeIn .4s ease .1s both;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.main-col::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,107,107,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,107,.015) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;}
+
+/* Top bar */
+.top-bar{padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.tb-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);font-size:.68rem;color:var(--muted);}
+.tb-dot{width:5px;height:5px;border-radius:50%;}
+.tb-spacer{flex:1;}
+/* Side-by-side toggle */
+.sbs-toggle{display:flex;align-items:center;gap:7px;font-size:.7rem;color:var(--muted);}
+.toggle-pill{width:36px;height:20px;border-radius:100px;background:var(--surface3);border:1px solid var(--border2);position:relative;cursor:none;transition:background .3s;}
+.toggle-pill.on{background:var(--accent3);}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.toggle-pill.on .toggle-thumb{transform:translateX(16px);}
+
+/* Summary area */
+.sum-area{flex:1;overflow-y:auto;padding:0;}
+.sum-area::-webkit-scrollbar{width:3px;}
+.sum-area::-webkit-scrollbar-thumb{background:rgba(255,107,107,.14);border-radius:2px;}
+
+/* Side-by-side layout */
+.sbs-wrap{display:flex;height:100%;gap:0;}
+.sbs-orig{flex:1;padding:20px 18px;border-right:1px solid var(--border);overflow-y:auto;font-size:.82rem;line-height:1.75;color:var(--muted);}
+.sbs-orig::-webkit-scrollbar{width:2px;}
+.sbs-orig::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+.sbs-sum{flex:1;padding:20px 18px;overflow-y:auto;}
+.sbs-sum::-webkit-scrollbar{width:2px;}
+.sbs-sum::-webkit-scrollbar-thumb{background:rgba(255,107,107,.15);border-radius:2px;}
+.sbs-lbl{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.sbs-lbl-dot{width:5px;height:5px;border-radius:50%;}
+
+/* Welcome */
+.welcome{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;}
+.w-ico{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,rgba(255,107,107,.15),rgba(124,107,255,.1));border:1px solid rgba(255,107,107,.2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.w-title{font-family:var(--font-head);font-size:1.3rem;font-weight:800;}
+.w-sub{font-size:.85rem;color:var(--muted);max-width:400px;line-height:1.7;}
+.w-steps{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;justify-content:center;}
+.w-step{padding:10px 16px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);}
+.w-step-num{width:20px;height:20px;border-radius:50%;background:rgba(255,107,107,.15);color:var(--accent3);font-family:var(--font-head);font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* Summary card */
+.sum-card{margin:18px 20px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);overflow:hidden;animation:cardIn .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+.sc-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;}
+.sc-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(255,107,107,.2),rgba(124,107,255,.15));display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.sc-title-wrap{flex:1;}
+.sc-title{font-family:var(--font-head);font-size:1rem;font-weight:800;margin-bottom:4px;}
+.sc-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.sc-badge{font-size:.58rem;padding:2px 8px;border-radius:100px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.sc-actions{display:flex;gap:6px;flex-shrink:0;}
+.sc-act{width:30px;height:30px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:none;display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:all .2s;}
+.sc-act:hover{background:var(--surface3);color:var(--text);}
+.sc-act.copy:hover{background:rgba(0,212,170,.1);color:var(--accent2);}
+
+/* Score card */
+.score-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border);}
+.score-item{padding:12px 14px;text-align:center;border-right:1px solid var(--border);}
+.score-item:last-child{border-right:none;}
+.score-val{font-family:var(--font-head);font-size:1.1rem;font-weight:800;}
+.score-lbl{font-size:.58rem;color:var(--muted);margin-top:3px;letter-spacing:.06em;text-transform:uppercase;}
+
+/* Topic chips */
+.topics-wrap{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.topics-lbl{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);font-weight:600;}
+.topic-chip{padding:3px 10px;border-radius:100px;font-size:.68rem;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);transition:all .2s;}
+
+/* Summary content */
+.sc-content{padding:16px 18px 18px;}
+.sum-section{margin-bottom:16px;}
+.sum-section:last-child{margin-bottom:0;}
+.sum-sec-title{font-family:var(--font-head);font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.sum-sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.sum-bullet{display:flex;gap:8px;font-size:.83rem;line-height:1.65;color:var(--muted);margin-bottom:6px;align-items:flex-start;}
+.sum-bullet-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:8px;}
+
+/* Highlight colors */
+.hl-deadline{background:rgba(255,107,107,.15);color:var(--accent3);padding:1px 4px;border-radius:4px;}
+.hl-fact{background:rgba(0,212,170,.12);color:var(--accent2);padding:1px 4px;border-radius:4px;}
+.hl-action{background:rgba(245,166,35,.12);color:var(--accent4);padding:1px 4px;border-radius:4px;}
+
+/* Generating animation */
+.generating{padding:30px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;}
+.gen-spinner{width:48px;height:48px;border-radius:50%;border:3px solid var(--surface3);border-top-color:var(--accent3);animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.gen-txt{font-family:var(--font-head);font-size:.9rem;font-weight:700;color:var(--muted);}
+.gen-steps{display:flex;flex-direction:column;gap:5px;margin-top:4px;}
+.gen-step{font-size:.74rem;color:var(--muted2);display:flex;align-items:center;gap:7px;}
+.gen-step.done{color:var(--accent2);}
+.gen-step.done::before{content:'✓';color:var(--accent2);font-weight:800;}
+.gen-step:not(.done)::before{content:'○';color:var(--muted2);}
+
+/* RIGHT PANEL */
+.right-panel{grid-column:3;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;animation:slideR .4s ease .1s both;}
+@keyframes slideR{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:translateX(0);}}
+.right-panel::-webkit-scrollbar{width:2px;}
+.right-panel::-webkit-scrollbar-thumb{background:rgba(255,107,107,.15);border-radius:2px;}
+.rp-sec{padding:14px 16px 0;}
+.rp-lbl{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:600;margin-bottom:10px;}
+.rp-div{height:1px;background:var(--border);margin:10px 16px;}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px 14px;}
+.st-card{padding:11px 10px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);text-align:center;}
+.st-val{font-family:var(--font-head);font-size:1.1rem;font-weight:800;}
+.st-lbl{font-size:.58rem;color:var(--muted);margin-top:2px;}
+
+/* History */
+.hist-list{padding:0 10px 14px;display:flex;flex-direction:column;gap:5px;}
+.hist-item{padding:9px 11px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);cursor:none;transition:background .2s;}
+.hist-item:hover{background:var(--surface3);}
+.hi-title{font-size:.75rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hi-meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.hi-mode{font-size:.58rem;padding:1px 6px;border-radius:100px;font-weight:700;text-transform:uppercase;}
+.hi-time{font-size:.6rem;color:var(--muted2);}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(50px);background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:10px 18px;display:flex;align-items:center;gap:9px;font-size:.8rem;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:9000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.td{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* Drag overlay */
+.drag-ov{position:fixed;inset:0;background:rgba(255,107,107,.06);border:2px dashed rgba(255,107,107,.4);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;backdrop-filter:blur(4px);}
+.drag-ov.show{display:flex;}
+</style>
+</head>
+<body>
+<div id="cur"></div><div id="cur-r"></div>
+<div class="toast" id="toast"><div class="td" id="td"></div><span id="tm"></span></div>
+<div class="drag-ov" id="dragOv">
+  <div style="font-size:2rem">📂</div>
+  <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:800;color:var(--accent3)">Drop files to summarize</div>
+  <div style="font-size:.8rem;color:var(--muted)">PDF, PPTX, DOCX, MD, TXT</div>
+</div>
+<input type="file" id="fileIn" multiple accept=".pdf,.pptx,.docx,.md,.txt" style="display:none" onchange="handleFiles(this.files)"/>
+
+<div class="app">
+  <!-- HEADER -->
+  <header>
+    <a href="dashboard.html" class="h-logo">NEXUS</a>
+    <div class="h-nav">
+      <button class="hn-btn" onclick="location.href='planner.html'">📅 Smart Planner</button>
+      <button class="hn-btn" onclick="location.href='reminders.html'">🔔 Reminders</button>
+      <button class="hn-btn" onclick="location.href='deepquery.html'">⚡ Deep Query</button>
+      <button class="hn-btn active">✨ Summaries</button>
+    </div>
+    <div class="h-right">
+      <a href="dashboard.html" class="back-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Dashboard
+      </a>
+      <button class="gen-all-btn" onclick="summarizeAll()"><span>✨ Summarize All</span></button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-top">
+      <button class="upload-btn" onclick="document.getElementById('fileIn').click()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Documents
+      </button>
+      <div class="ft-row">
+        <span class="ft">PDF</span><span class="ft">PPTX</span><span class="ft">DOCX</span><span class="ft">MD</span><span class="ft">TXT</span>
+      </div>
+    </div>
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="m-tab active" id="mQuick" onclick="setMode('quick',this)">⚡ Quick</button>
+      <button class="m-tab" id="mDeep" onclick="setMode('deep',this)">📋 Deep</button>
+      <button class="m-tab" id="mCustom" onclick="setMode('custom',this)">🎯 Custom</button>
+    </div>
+
+    <div class="sb-sec" style="margin-top:8px;">
+      Files
+      <span class="sb-cnt" id="sbCnt">0</span>
+      <button class="sel-all-btn" onclick="selectAll()">Select all</button>
+    </div>
+    <div class="f-list" id="fList">
+      <div class="empty-sb" id="eSb">
+        <div class="esb-ico">✨</div>
+        <div class="esb-txt">Upload documents and select them to generate summaries.</div>
+      </div>
+    </div>
+
+    <!-- Compression slider -->
+    <div class="slider-wrap">
+      <div class="sl-header">
+        <span class="sl-lbl">Compression</span>
+        <span class="sl-val" id="slVal">Tweet</span>
+      </div>
+      <div class="sl-labels"><span>Tweet</span><span>Brief</span><span>Report</span></div>
+      <input type="range" id="compSlider" min="1" max="5" value="1" oninput="updateSlider(this.value)"/>
+      <div class="sl-mode-lbl" id="slModeLbl">1 sentence summary</div>
+    </div>
+  </aside>
+
+  <!-- CENTER -->
+  <main class="main-col">
+    <div class="top-bar">
+      <span style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);">Context:</span>
+      <div class="tb-chip" id="ctxChip">
+        <div class="tb-dot" style="background:var(--muted2)"></div>
+        No files selected
+      </div>
+      <div class="tb-chip" id="modeChip" style="color:var(--accent3);border-color:rgba(255,107,107,.2);background:rgba(255,107,107,.06);">⚡ Quick Summary</div>
+      <div class="tb-spacer"></div>
+      <!-- Side-by-side toggle -->
+      <div class="sbs-toggle">
+        Side-by-side
+        <div class="toggle-pill" id="sbsToggle" onclick="toggleSBS()">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sum-area" id="sumArea">
+      <div class="welcome" id="welcome">
+        <div class="w-ico">✨</div>
+        <h2 class="w-title">Instant Summary Engine</h2>
+        <p class="w-sub">Upload documents, select files, set your compression level, and generate structured summaries in one click. See originals and summaries side by side.</p>
+        <div class="w-steps">
+          <div class="w-step"><div class="w-step-num">1</div>Upload files</div>
+          <div class="w-step"><div class="w-step-num">2</div>Select files</div>
+          <div class="w-step"><div class="w-step-num">3</div>Set compression</div>
+          <div class="w-step"><div class="w-step-num">4</div>Click Summarize All</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+    <div class="rp-sec"><div class="rp-lbl">📊 Session Stats</div></div>
+    <div class="stat-grid">
+      <div class="st-card"><div class="st-val" id="stDocs" style="color:var(--accent3)">0</div><div class="st-lbl">Summarized</div></div>
+      <div class="st-card"><div class="st-val" id="stWords" style="color:var(--accent)">0</div><div class="st-lbl">Words Saved</div></div>
+      <div class="st-card"><div class="st-val" id="stTime" style="color:var(--accent2)">0m</div><div class="st-lbl">Time Saved</div></div>
+      <div class="st-card"><div class="st-val" id="stRatio" style="color:var(--accent4)">—</div><div class="st-lbl">Avg Ratio</div></div>
+    </div>
+
+    <div class="rp-div"></div>
+    <div class="rp-sec"><div class="rp-lbl">🕐 Summary History</div></div>
+    <div class="hist-list" id="histList">
+      <div style="font-size:.72rem;color:var(--muted2);padding:4px 0;">No summaries yet.</div>
+    </div>
+
+    <div class="rp-div"></div>
+    <div class="rp-sec" style="padding-bottom:16px;">
+      <div class="rp-lbl">🎨 Highlight Legend</div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:0 0 0 0;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:.73rem;color:var(--muted)"><span class="hl-deadline">Deadline</span> Critical dates & submissions</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:.73rem;color:var(--muted)"><span class="hl-fact">Key Fact</span> Important data points</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:.73rem;color:var(--muted)"><span class="hl-action">Action</span> Tasks to complete</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const BACKEND_URL = "http://127.0.0.1:5000";
+// Cursor
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-r');
+let mx=window.innerWidth/2,my=window.innerHeight/2,rx=mx,ry=my;
+cur.style.opacity='0';curR.style.opacity='0';
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';cur.style.opacity='1';curR.style.opacity='1';});
+(function loop(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(loop);})();
+
+// Theme
+if(localStorage.getItem('nexus-theme')==='light') document.body.classList.add('light');
+
+// Toast
+let tTimer;
+function t2(msg,color='var(--accent3)'){document.getElementById('tm').textContent=msg;document.getElementById('td').style.background=color;const t=document.getElementById('toast');t.classList.add('show');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+// State
+let files=[];
+let summaryMode='quick';
+let compressionLevel=1;
+let sbsMode=false;
+let docsSummarized=0,totalWordsSaved=0;
+
+const modeLabels={quick:'⚡ Quick Summary',deep:'📋 Deep Summary',custom:'🎯 Custom Summary'};
+const sliderLabels={1:'Tweet — 1 sentence',2:'Snippet — 3 bullet points',3:'Brief — key sections',4:'Overview — structured report',5:'Executive Brief — full analysis'};
+const sliderNames={1:'Tweet',2:'Snippet',3:'Brief',4:'Overview',5:'Executive Brief'};
+const fIco={pdf:'📄',pptx:'📊',docx:'📝',md:'#️⃣',txt:'📃'};
+function gExt(n){return n.split('.').pop().toLowerCase();}
+function fSz(b){return b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
+
+// Slider
+function updateSlider(v){
+  compressionLevel=parseInt(v);
+  document.getElementById('slVal').textContent=sliderNames[v];
+  document.getElementById('slModeLbl').textContent=sliderLabels[v];
+  const pct=((v-1)/4)*100;
+  document.getElementById('compSlider').style.setProperty('--pct',pct+'%');
+  // Live preview — if summary showing, update it
+  if(document.querySelector('.sum-card')){
+    const selected=files.filter(f=>f.selected);
+    if(selected.length>0) generateSummary(selected,true);
+  }
+}
+
+// Mode
+function setMode(m,btn){
+  summaryMode=m;
+  document.querySelectorAll('.m-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('modeChip').textContent=modeLabels[m];
+}
+
+// SBS toggle
+function toggleSBS(){
+  sbsMode=!sbsMode;
+  document.getElementById('sbsToggle').classList.toggle('on',sbsMode);
+  t2(sbsMode?'Side-by-side ON':'Side-by-side OFF','var(--accent3)');
+  if(document.querySelector('.sum-card')){
+    const selected=files.filter(f=>f.selected);
+    if(selected.length>0) generateSummary(selected,true);
+  }
+}
+
+// Files
+function handleFiles(fs){
+  Array.from(fs).forEach((f,i)=>{
+    setTimeout(async()=>{
+      const formData=new FormData();
+      formData.append('file',f);
+      try{
+        const res=await fetch(`${BACKEND_URL}/upload`,{method:'POST',body:formData});
+        const data=await res.json();
+        if(data.error){t2(data.error,'var(--accent3)');return;}
+        files.push({file:f,selected:true});
+        renderSidebar();updateCtx();
+        document.getElementById('sbCnt').textContent=files.length;
+        t2(f.name+' uploaded','var(--accent2)');
+      }catch(err){
+        t2('Upload failed — is Flask running?','var(--accent3)');
+      }
+    },i*300);
+  });
+}
+
+function renderSidebar(){
+  const list=document.getElementById('fList');
+  document.getElementById('eSb')?.remove();
+  list.innerHTML='';
+  if(!files.length){
+    list.innerHTML='<div class="empty-sb" id="eSb"><div class="esb-ico">✨</div><div class="esb-txt">Upload documents and select them to generate summaries.</div></div>';
+    return;
+  }
+  files.forEach((f,i)=>{
+    const ext=gExt(f.file.name);
+    const el=document.createElement('div');
+    el.className='f-item'+(f.selected?' sel':'');
+    el.id='fi_'+i;
+    el.innerHTML=`
+      <div class="f-chk"></div>
+      <div class="f-ico" style="background:rgba(255,107,107,.1)">${fIco[ext]||'📎'}</div>
+      <div class="f-meta">
+        <div class="f-name">${f.file.name}</div>
+        <div class="f-sz">${fSz(f.file.size)} · ${ext.toUpperCase()}</div>
+      </div>
+      <button class="f-del" onclick="removeFile(${i},event)">✕</button>`;
+    el.onclick=(e)=>{if(!e.target.classList.contains('f-del')){f.selected=!f.selected;renderSidebar();updateCtx();}};
+    list.appendChild(el);
+  });
+}
+
+function removeFile(i,e){
+  e.stopPropagation();
+  const el=document.getElementById('fi_'+i);
+  if(el){el.style.opacity='0';el.style.transform='translateX(-10px)';el.style.transition='all .3s';
+    setTimeout(()=>{files.splice(i,1);renderSidebar();updateCtx();document.getElementById('sbCnt').textContent=files.length;},300);}
+}
+
+function selectAll(){
+  const allSel=files.every(f=>f.selected);
+  files.forEach(f=>f.selected=!allSel);
+  renderSidebar();updateCtx();
+}
+
+function updateCtx(){
+  const sel=files.filter(f=>f.selected);
+  const chip=document.getElementById('ctxChip');
+  if(!sel.length) chip.innerHTML='<div class="tb-dot" style="background:var(--muted2)"></div>No files selected';
+  else chip.innerHTML=`<div class="tb-dot" style="background:var(--accent3)"></div>${sel.length} file${sel.length>1?'s':''} selected`;
+}
+
+// Summary data per mode and level
+function getSummaryData(filename,mode,level){
+  const base={
+    quick:{
+      1:{bullets:['RAG system uses vector embeddings for semantic document search.'],topics:['RAG','Vector Search'],compression:98,words:8,origWords:420,readTime:2},
+      2:{bullets:['NEXUS uses Flask + ChromaDB for private document querying.','RAG retrieval ensures zero hallucination on personal data.','Supports PDF, PPTX, DOCX, and markdown file formats.'],topics:['RAG','Flask','ChromaDB','Privacy'],compression:94,words:32,origWords:520,readTime:3},
+      3:{bullets:['System architecture built on Flask with ChromaDB vector store.','RAG pipeline: ingest → chunk → embed → retrieve → generate.','Supports multiple LLM backends including Gemini and Ollama.','Private by design — embeddings stored locally, no external data sharing.'],topics:['Architecture','RAG','LLM','Privacy','Flask'],compression:88,words:52,origWords:440,readTime:2},
+    },
+    deep:{
+      3:{
+        sections:[
+          {title:'Key Points',color:'var(--accent3)',bullets:['<span class="hl-fact">RAG reduces hallucination</span> by grounding responses in retrieved document chunks.','Flask handles document ingestion, chunking, and query routing.','<span class="hl-deadline">Project deadline: March 28</span> — full submission including report and code.']},
+          {title:'Architecture',color:'var(--accent)',bullets:['ChromaDB stores vector embeddings locally for fast semantic retrieval.','sentence-transformers generates embeddings from uploaded documents.','Cosine similarity threshold of <span class="hl-fact">0.75</span> used for retrieval precision.']},
+          {title:'Action Items',color:'var(--accent4)',bullets:['<span class="hl-action">Complete frontend screens</span> — dashboard, planner, reminders, deep query, summaries.','<span class="hl-action">Push PR to GitHub</span> with all code, documentation, and README updated.','<span class="hl-action">Submit final report</span> to course portal by noon on March 28.']},
+        ],
+        topics:['RAG','ChromaDB','Flask','Deadlines','Architecture'],compression:82,words:95,origWords:520,readTime:3,
+      },
+    },
+    custom:{
+      3:{
+        sections:[
+          {title:'Technical Focus',color:'var(--accent2)',bullets:['Vector embeddings use sentence-transformers/all-MiniLM-L6-v2 model.','<span class="hl-fact">Chunk size: 512 tokens</span> with 50-token overlap for context continuity.','Retrieval uses cosine similarity; top-k=5 results per query.']},
+          {title:'Deadlines Extracted',color:'var(--accent3)',bullets:['<span class="hl-deadline">March 20</span> — NEXUS Frontend PR submission.','<span class="hl-deadline">March 28</span> — Final project and report submission.','<span class="hl-deadline">March 18</span> — Cloud Computing examination.']},
+        ],
+        topics:['Technical','Deadlines','RAG','Exams'],compression:85,words:72,origWords:480,readTime:3,
+      },
+    },
+  };
+  const modeData=base[mode]||base.quick;
+  return modeData[Math.min(level,Object.keys(modeData).length)]||modeData[Object.keys(modeData)[0]];
+}
+
+// Generate
+async function summarizeAll(){
+  const selected=files.filter(f=>f.selected);
+  if(!selected.length){t2('Select at least one file first','var(--accent3)');return;}
+  document.getElementById('welcome')?.remove();
+
+  showGenerating(selected, async()=>{
+    const area=document.getElementById('sumArea');
+    area.innerHTML='';
+
+    for(const f of selected){
+      try{
+        const res=await fetch(`${BACKEND_URL}/summarize`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({filename:f.file.name, mode:summaryMode})
+        });
+        const data=await res.json();
+        if(data.error){t2(data.error,'var(--accent3)');continue;}
+
+        // Build real summary card from backend response
+        const summary=data.summary;
+        const card=document.createElement('div');
+        card.className='sum-card';
+        card.style.cssText='margin:18px 20px;';
+        const mc={quick:'rgba(255,107,107,.15)',deep:'rgba(124,107,255,.12)',custom:'rgba(0,212,170,.1)'};
+        const mtc={quick:'var(--accent3)',deep:'var(--accent)',custom:'var(--accent2)'};
+
+        card.innerHTML=`
+          <div class="sc-header">
+            <div class="sc-icon">✨</div>
+            <div class="sc-title-wrap">
+              <div class="sc-title">${f.file.name}</div>
+              <div class="sc-meta">
+                <span class="sc-badge" style="background:${mc[summaryMode]};color:${mtc[summaryMode]}">${sliderNames[compressionLevel]}</span>
+                <span style="font-size:.65rem;color:var(--accent2)">AI Generated</span>
+              </div>
+            </div>
+            <div class="sc-actions">
+              <button class="sc-act copy" onclick="copySummary(this)" title="Copy">📋</button>
+            </div>
+          </div>
+          <div class="sc-content" style="padding:16px 18px 18px;font-size:.85rem;line-height:1.75;color:var(--muted);white-space:pre-wrap;">${summary}</div>`;
+
+        area.appendChild(card);
+        docsSummarized++;
+        document.getElementById('stDocs').textContent=docsSummarized;
+        addHistory(f.file.name, 80);
+        t2('Summary ready ✨','var(--accent3)');
+
+      }catch(err){
+        t2('Backend not reachable — is Flask running?','var(--accent3)');
+      }
+    }
+  });
+}
+
+function showGenerating(selected,cb){
+  const area=document.getElementById('sumArea');
+  area.innerHTML=`
+    <div class="generating">
+      <div class="gen-spinner"></div>
+      <div class="gen-txt">Generating ${sliderNames[compressionLevel]} summary...</div>
+      <div class="gen-steps" id="genSteps">
+        <div class="gen-step" id="gs1">Reading ${selected.length} document${selected.length>1?'s':''}</div>
+        <div class="gen-step" id="gs2">Extracting key information</div>
+        <div class="gen-step" id="gs3">Applying compression level ${compressionLevel}</div>
+        <div class="gen-step" id="gs4">Highlighting important content</div>
+      </div>
+    </div>`;
+  let step=0;
+  const steps=['gs1','gs2','gs3','gs4'];
+  const iv=setInterval(()=>{
+    if(step<steps.length){document.getElementById(steps[step])?.classList.add('done');step++;}
+    else{clearInterval(iv);cb();}
+  },400);
+}
+
+function generateSummary(selected,instant){
+  const area=document.getElementById('sumArea');
+  area.innerHTML='';
+  const fname=selected.length===1?selected[0].file.name:`${selected.length} documents combined`;
+  const data=getSummaryData(fname,summaryMode,compressionLevel);
+  const wordsSaved=data.origWords-data.words;
+  const timeSaved=Math.round(data.origWords/200);
+
+  if(sbsMode){
+    // Side by side
+    const wrap=document.createElement('div');wrap.className='sbs-wrap';
+    const orig=document.createElement('div');orig.className='sbs-orig';
+    orig.innerHTML=`<div class="sbs-lbl"><div class="sbs-lbl-dot" style="background:var(--muted2)"></div>Original — ${data.origWords} words · ~${data.readTime} min read</div><p style="opacity:.7;font-size:.83rem;line-height:1.75">This document covers the architecture and implementation of the NEXUS Personal Productivity Assistant. The system uses Retrieval-Augmented Generation (RAG) with Flask as the backend framework. ChromaDB is used for vector storage, and sentence-transformers generates the embeddings. The project supports multiple file formats including PDF, PPTX, DOCX, and markdown. The RAG pipeline ensures that responses are grounded in the user's own documents, significantly reducing hallucination. Key deadlines include the frontend PR on March 20 and the final project submission on March 28. The system is designed to be private by default — all embeddings are stored locally and no data leaves the user's environment...</p>`;
+    const sum=document.createElement('div');sum.className='sbs-sum';
+    sum.innerHTML=`<div class="sbs-lbl"><div class="sbs-lbl-dot" style="background:var(--accent3)"></div>Summary — ${data.words} words · ${data.compression}% shorter</div>`;
+    sum.appendChild(buildSummaryCard(fname,data,wordsSaved,timeSaved,true));
+    wrap.appendChild(orig);wrap.appendChild(sum);
+    area.appendChild(wrap);
+  } else {
+    area.appendChild(buildSummaryCard(fname,data,wordsSaved,timeSaved,false));
+  }
+
+  // Update stats
+  docsSummarized+=selected.length;
+  totalWordsSaved+=wordsSaved;
+  document.getElementById('stDocs').textContent=docsSummarized;
+  document.getElementById('stWords').textContent=totalWordsSaved>999?Math.round(totalWordsSaved/1000)+'k':totalWordsSaved;
+  document.getElementById('stTime').textContent=Math.round(totalWordsSaved/200)+'m';
+  document.getElementById('stRatio').textContent=data.compression+'%';
+  addHistory(fname,data.compression);
+  if(!instant) t2('Summary generated ✨','var(--accent3)');
+}
+
+function buildSummaryCard(fname,data,wordsSaved,timeSaved,compact){
+  const card=document.createElement('div');
+  card.className='sum-card';
+  if(!compact) card.style.cssText='margin:18px 20px;';
+
+  const modeColors={quick:'rgba(255,107,107,.15)',deep:'rgba(124,107,255,.12)',custom:'rgba(0,212,170,.1)'};
+  const modeTextColors={quick:'var(--accent3)',deep:'var(--accent)',custom:'var(--accent2)'};
+  const mc=modeColors[summaryMode];const mtc=modeTextColors[summaryMode];
+
+  // Header
+  const head=`<div class="sc-header">
+    <div class="sc-icon">✨</div>
+    <div class="sc-title-wrap">
+      <div class="sc-title">${fname}</div>
+      <div class="sc-meta">
+        <span class="sc-badge" style="background:${mc};color:${mtc}">${sliderNames[compressionLevel]}</span>
+        <span style="font-size:.65rem;color:var(--muted2)">${data.words} words</span>
+        <span style="font-size:.65rem;color:var(--accent2)">↓${data.compression}% compressed</span>
+      </div>
+    </div>
+    <div class="sc-actions">
+      <button class="sc-act copy" onclick="copySummary(this)" title="Copy">📋</button>
+      <button class="sc-act" onclick="t2('Exported as PDF ✓','var(--accent2)')" title="Export">📥</button>
+    </div>
+  </div>`;
+
+  // Score row
+  const score=`<div class="score-row">
+    <div class="score-item"><div class="score-val" style="color:var(--accent3)">${data.compression}%</div><div class="score-lbl">Compressed</div></div>
+    <div class="score-item"><div class="score-val" style="color:var(--accent)">${wordsSaved}</div><div class="score-lbl">Words Saved</div></div>
+    <div class="score-item"><div class="score-val" style="color:var(--accent2)">${timeSaved}m</div><div class="score-lbl">Time Saved</div></div>
+    <div class="score-item"><div class="score-val" style="color:var(--accent4)">${data.topics.length}</div><div class="score-lbl">Topics</div></div>
+  </div>`;
+
+  // Topics
+  const topicChips=data.topics.map(t=>`<span class="topic-chip">${t}</span>`).join('');
+  const topics=`<div class="topics-wrap"><span class="topics-lbl">Topics</span>${topicChips}</div>`;
+
+  // Content
+  let content='<div class="sc-content">';
+  if(data.bullets){
+    content+=`<div class="sum-section"><div class="sum-sec-title" style="color:var(--accent3)">Summary</div>`;
+    data.bullets.forEach(b=>{content+=`<div class="sum-bullet"><div class="sum-bullet-dot" style="background:var(--accent3)"></div><span>${b}</span></div>`;});
+    content+='</div>';
+  }
+  if(data.sections){
+    data.sections.forEach(sec=>{
+      content+=`<div class="sum-section"><div class="sum-sec-title" style="color:${sec.color}">${sec.title}</div>`;
+      sec.bullets.forEach(b=>{content+=`<div class="sum-bullet"><div class="sum-bullet-dot" style="background:${sec.color}"></div><span>${b}</span></div>`;});
+      content+='</div>';
+    });
+  }
+  content+='</div>';
+
+  card.innerHTML=head+score+topics+content;
+  return card;
+}
+
+function copySummary(btn){
+  const card=btn.closest('.sum-card');
+  const text=card?.querySelector('.sc-content')?.innerText||'';
+  navigator.clipboard.writeText(text).then(()=>t2('Summary copied to clipboard ✓','var(--accent2)'));
+}
+
+function addHistory(fname,compression){
+  const list=document.getElementById('histList');
+  if(list.firstChild?.style?.color) list.innerHTML='';
+  const el=document.createElement('div');el.className='hist-item';
+  const now=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const mc={quick:'rgba(255,107,107,.15)',deep:'rgba(124,107,255,.12)',custom:'rgba(0,212,170,.1)'};
+  const mtc={quick:'var(--accent3)',deep:'var(--accent)',custom:'var(--accent2)'};
+  el.innerHTML=`<div class="hi-title">${fname}</div><div class="hi-meta"><span class="hi-mode" style="background:${mc[summaryMode]};color:${mtc[summaryMode]}">${sliderNames[compressionLevel]}</span><span style="font-size:.6rem;color:var(--accent2)">↓${compression}%</span><span class="hi-time">${now}</span></div>`;
+  el.onclick=()=>t2('Re-summarizing '+fname+'...','var(--accent3)');
+  list.insertBefore(el,list.firstChild);
+  while(list.children.length>8) list.removeChild(list.lastChild);
+}
+
+// Load existing files from backend
+async function loadExistingFiles(){
+  try{
+    const res=await fetch(`${BACKEND_URL}/files`);
+    const data=await res.json();
+    data.files.forEach(f=>{
+      files.push({file:{name:f.filename,size:f.size},selected:true});
+    });
+    renderSidebar();updateCtx();
+    document.getElementById('sbCnt').textContent=files.length;
+  }catch(err){console.log('Could not load files');}
+}
+loadExistingFiles();
+
+// Init slider
+updateSlider(1);
+
+// Drag & drop
+document.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('dragOv').classList.add('show');});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.getElementById('dragOv').classList.remove('show');});
+document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dragOv').classList.remove('show');handleFiles(e.dataTransfer.files);});
+</script>
+</body>
+</html>

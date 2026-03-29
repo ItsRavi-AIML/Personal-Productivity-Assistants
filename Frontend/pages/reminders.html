@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXUS — Smart Reminders</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050508;--surface:#0d0d14;--surface2:#111118;--surface3:#16161f;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --accent:#7c6bff;--accent2:#00d4aa;--accent3:#ff6b6b;--accent4:#f5a623;--accent5:#a78bfa;
+  --text:#f0eeff;--muted:rgba(240,238,255,.45);--muted2:rgba(240,238,255,.22);
+  --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+  --hdr:56px;--sb:220px;--right:300px;
+}
+body.light{
+  --bg:#f5f4ff;--surface:#ffffff;--surface2:#f0eeff;--surface3:#e8e6ff;
+  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.13);
+  --text:#1a1830;--muted:rgba(26,24,48,.5);--muted2:rgba(26,24,48,.25);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);cursor:none;transition:background .4s,color .4s;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.022;pointer-events:none;z-index:9997;}
+
+/* CURSOR */
+#cur{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent4);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);mix-blend-mode:screen;transition:width .2s,height .2s,background .2s;}
+#cur-r{position:fixed;top:0;left:0;width:28px;height:28px;border:1.5px solid rgba(245,166,35,.45);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .25s,height .25s,border-color .25s;}
+body:has(button:hover) #cur{width:13px;height:13px;background:var(--accent2);}
+body:has(button:hover) #cur-r{width:38px;height:38px;border-color:var(--accent2);}
+
+/* APP */
+.app{display:grid;grid-template-rows:var(--hdr) 1fr;grid-template-columns:var(--sb) 1fr var(--right);height:100vh;}
+
+/* ── HEADER ── */
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);z-index:300;}
+.h-logo{font-family:var(--font-head);font-size:1.2rem;font-weight:800;letter-spacing:.12em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;cursor:none;}
+.h-nav{display:flex;gap:3px;}
+.hn-btn{padding:6px 13px;border-radius:9px;border:1px solid transparent;background:transparent;color:var(--muted);font-family:var(--font-head);font-size:.72rem;font-weight:700;letter-spacing:.05em;cursor:none;transition:all .2s;}
+.hn-btn.active{background:rgba(245,166,35,.12);border-color:rgba(245,166,35,.3);color:var(--accent4);}
+.hn-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
+.h-right{display:flex;align-items:center;gap:8px;}
+.back-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:.75rem;text-decoration:none;cursor:none;transition:all .2s;}
+.back-btn:hover{color:var(--text);border-color:rgba(124,107,255,.3);}
+.notif-status{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;border:1px solid var(--border2);background:var(--surface2);font-size:.7rem;color:var(--muted);}
+.n-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);}
+.n-dot.on{background:var(--accent2);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.enable-btn{padding:7px 16px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--accent4),#d4870a);color:#fff;font-family:var(--font-head);font-size:.75rem;font-weight:700;cursor:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;}
+.enable-btn:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(245,166,35,.35);}
+
+/* ── LEFT SIDEBAR — stats only, no duplicate list ── */
+.sidebar{grid-column:1;grid-row:2;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;animation:slideL .4s ease both;}
+@keyframes slideL{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:translateX(0);}}
+
+.sb-header{padding:16px 16px 10px;}
+.sb-title{font-family:var(--font-head);font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:12px;}
+
+/* Summary stat cards */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 16px;}
+.s-card{padding:14px 12px;border-radius:13px;border:1px solid var(--border);background:var(--surface2);text-align:center;transition:background .25s,transform .2s cubic-bezier(.34,1.56,.64,1);cursor:none;}
+.s-card:hover{background:var(--surface3);transform:scale(1.03);}
+.s-card.clickable{cursor:none;}
+.s-val{font-family:var(--font-head);font-size:1.6rem;font-weight:800;line-height:1;}
+.s-lbl{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+.s-card.overdue .s-val{color:var(--accent3);}
+.s-card.today .s-val{color:var(--accent4);}
+.s-card.upcoming .s-val{color:var(--accent);}
+.s-card.done .s-val{color:var(--accent2);}
+
+.sb-div{height:1px;background:var(--border);margin:14px 16px;}
+.sb-sec-lbl{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:600;padding:0 16px 8px;}
+
+/* Category breakdown */
+.cat-list{padding:0 16px;display:flex;flex-direction:column;gap:5px;}
+.cat-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);cursor:none;transition:background .2s;}
+.cat-row:hover{background:var(--surface3);}
+.cat-left{display:flex;align-items:center;gap:7px;}
+.cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.cat-name{font-size:.75rem;font-weight:500;}
+.cat-count{font-family:var(--font-head);font-size:.72rem;font-weight:700;color:var(--muted);}
+
+/* Progress ring */
+.prog-wrap{padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px;}
+.prog-ring-svg{transform:rotate(-90deg);}
+.prog-ring-bg{fill:none;stroke:var(--surface3);stroke-width:6;}
+.prog-ring-fill{fill:none;stroke:url(#ringGrad);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);}
+.prog-center{text-align:center;}
+.prog-pct{font-family:var(--font-head);font-size:1.2rem;font-weight:800;color:var(--accent2);}
+.prog-lbl{font-size:.62rem;color:var(--muted);margin-top:2px;}
+
+.sb-upload{margin:10px 16px 16px;}
+.sb-upload-btn{width:100%;padding:9px;border-radius:11px;border:1.5px dashed rgba(245,166,35,.35);background:rgba(245,166,35,.04);color:var(--accent4);font-family:var(--font-head);font-size:.74rem;font-weight:700;cursor:none;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.sb-upload-btn:hover{background:rgba(245,166,35,.1);border-color:var(--accent4);}
+
+/* ── CENTER ── */
+.main-col{grid-column:2;grid-row:2;display:flex;flex-direction:column;overflow:hidden;position:relative;animation:fadeIn .4s ease .1s both;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.main-col::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(245,166,35,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(245,166,35,.012) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;}
+
+/* Filter bar */
+.filter-bar{padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.f-btn{padding:5px 14px;border-radius:100px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:.71rem;font-family:var(--font-head);font-weight:700;cursor:none;transition:all .2s;display:flex;align-items:center;gap:5px;}
+.f-btn.active{background:rgba(245,166,35,.12);border-color:rgba(245,166,35,.3);color:var(--accent4);}
+.f-btn:hover:not(.active){background:var(--surface2);color:var(--text);}
+.f-count{font-size:.6rem;padding:1px 5px;border-radius:100px;background:var(--surface3);font-weight:700;}
+.f-btn.active .f-count{background:rgba(245,166,35,.2);}
+.f-spacer{flex:1;}
+.sort-sel{padding:5px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:.7rem;font-family:var(--font-body);cursor:none;outline:none;}
+
+/* Reminder cards */
+.rem-scroll{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;}
+.rem-scroll::-webkit-scrollbar{width:3px;}
+.rem-scroll::-webkit-scrollbar-thumb{background:rgba(245,166,35,.15);border-radius:2px;}
+
+.rem-card{padding:16px 18px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;transition:all .25s;position:relative;overflow:hidden;animation:cardIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.rem-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.rem-card.overdue::before{background:var(--accent3);}
+.rem-card.today::before{background:var(--accent4);}
+.rem-card.upcoming::before{background:var(--accent);}
+.rem-card.done::before{background:var(--muted2);}
+.rem-card:hover{background:var(--surface2);border-color:var(--border2);transform:translateX(4px);}
+.rem-card.done{opacity:.5;}
+.rem-card.done .rc-title{text-decoration:line-through;}
+
+/* Checkbox */
+.rc-chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;cursor:none;display:flex;align-items:center;justify-content:center;transition:all .25s;margin-top:1px;}
+.rc-chk:hover{border-color:var(--accent2);background:rgba(0,212,170,.1);}
+.rc-chk.on{background:var(--accent2);border-color:var(--accent2);}
+.rc-chk.on::after{content:'✓';color:#fff;font-size:.62rem;font-weight:800;}
+
+/* Card body */
+.rc-body{flex:1;min-width:0;}
+.rc-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;}
+.rc-title{font-family:var(--font-head);font-size:.9rem;font-weight:700;}
+.rc-pri{font-size:.57rem;padding:2px 7px;border-radius:100px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.ph{background:rgba(255,107,107,.15);color:var(--accent3);}
+.pm{background:rgba(245,166,35,.13);color:var(--accent4);}
+.pl{background:rgba(124,107,255,.12);color:var(--accent);}
+.rc-src{font-size:.62rem;padding:2px 7px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);}
+.rc-status{font-size:.63rem;font-weight:700;display:flex;align-items:center;gap:3px;}
+.rc-status.overdue{color:var(--accent3);}
+.rc-status.today{color:var(--accent4);}
+.rc-desc{font-size:.78rem;color:var(--muted);line-height:1.55;margin-bottom:8px;}
+.rc-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.rc-time{display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--muted);}
+.rc-time svg{width:11px;height:11px;}
+.rc-cat{font-size:.62rem;padding:2px 8px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.rc-left{font-size:.65rem;font-weight:600;}
+
+/* Card actions */
+.rc-acts{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+.rc-act{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:var(--muted2);cursor:none;display:flex;align-items:center;justify-content:center;font-size:.78rem;transition:background .2s,color .2s;}
+.rc-act:hover{background:var(--surface3);color:var(--text);}
+.rc-act.del:hover{background:rgba(255,107,107,.12);color:var(--accent3);}
+.rc-act.snz:hover{background:rgba(245,166,35,.1);color:var(--accent4);}
+
+/* Empty */
+.empty-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:40px;}
+.em-ico{font-size:2.8rem;opacity:.25;}
+.em-t{font-family:var(--font-head);font-size:1rem;font-weight:800;color:var(--muted);}
+.em-s{font-size:.8rem;color:var(--muted2);max-width:280px;line-height:1.6;}
+
+/* ── SINGLE ADD BAR at bottom ── */
+.add-bar{padding:12px 20px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.add-row{display:flex;gap:7px;align-items:center;}
+.add-inp{flex:1;padding:10px 14px;border-radius:12px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-body);font-size:.85rem;outline:none;cursor:none;transition:border-color .3s,box-shadow .3s;}
+.add-inp:focus{border-color:rgba(245,166,35,.45);box-shadow:0 0 0 3px rgba(245,166,35,.07);}
+.add-inp::placeholder{color:var(--muted2);}
+.add-dt{padding:10px;border-radius:12px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-body);font-size:.78rem;outline:none;cursor:none;}
+.add-dt:focus{border-color:rgba(245,166,35,.45);}
+.add-pri{padding:10px 8px;border-radius:12px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-body);font-size:.76rem;outline:none;cursor:none;}
+.add-save{padding:10px 18px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent4),#d4870a);color:#fff;font-family:var(--font-head);font-size:.78rem;font-weight:700;cursor:none;white-space:nowrap;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;position:relative;overflow:hidden;}
+.add-save:hover{transform:scale(1.04);box-shadow:0 6px 20px rgba(245,166,35,.3);}
+.add-hint{font-size:.6rem;color:var(--muted2);margin-top:5px;display:flex;gap:5px;align-items:center;}
+kbd{padding:1px 4px;border-radius:3px;border:1px solid var(--border2);font-size:.58rem;}
+
+/* ── RIGHT PANEL ── */
+.right-panel{grid-column:3;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;animation:slideR .4s ease .1s both;}
+@keyframes slideR{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:translateX(0);}}
+.right-panel::-webkit-scrollbar{width:2px;}
+.right-panel::-webkit-scrollbar-thumb{background:rgba(245,166,35,.15);border-radius:2px;}
+.rp-sec{padding:14px 16px 0;}
+.rp-lbl{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:600;margin-bottom:10px;}
+.rp-div{height:1px;background:var(--border);margin:10px 16px;}
+
+/* Notification card */
+.nc{margin:0 16px 14px;padding:14px;border-radius:14px;border:1px solid rgba(245,166,35,.25);background:rgba(245,166,35,.06);}
+.nc-title{font-family:var(--font-head);font-size:.82rem;font-weight:700;color:var(--accent4);margin-bottom:5px;}
+.nc-sub{font-size:.72rem;color:var(--muted);line-height:1.55;margin-bottom:10px;}
+.nc-btn{width:100%;padding:9px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent4),#d4870a);color:#fff;font-family:var(--font-head);font-size:.75rem;font-weight:700;cursor:none;transition:all .25s;}
+.nc-btn:hover{transform:scale(1.02);box-shadow:0 4px 14px rgba(245,166,35,.3);}
+.nc-ok{font-size:.75rem;color:var(--accent2);display:flex;align-items:center;gap:5px;font-weight:600;}
+
+/* Timeline */
+.tl{padding:0 10px 14px;display:flex;flex-direction:column;gap:0;position:relative;}
+.tl::before{content:'';position:absolute;left:20px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,transparent,var(--border),transparent);}
+.tl-item{display:flex;gap:10px;padding:7px 0;}
+.tl-dot{width:12px;height:12px;border-radius:50%;border:2px solid;flex-shrink:0;z-index:1;margin-top:3px;}
+.tl-info{flex:1;}
+.tl-t{font-size:.76rem;font-weight:600;line-height:1.3;}
+.tl-d{font-size:.62rem;color:var(--muted);margin-top:2px;}
+.tl-badge{font-size:.55rem;padding:1px 6px;border-radius:100px;font-weight:700;text-transform:uppercase;margin-top:3px;display:inline-block;}
+
+/* Notif log */
+.nl{padding:0 14px 16px;display:flex;flex-direction:column;gap:6px;}
+.nl-item{padding:9px 11px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;gap:8px;}
+.nl-ico{font-size:.95rem;flex-shrink:0;margin-top:1px;}
+.nl-t{font-size:.74rem;font-weight:600;}
+.nl-s{font-size:.62rem;color:var(--muted);margin-top:1px;}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(50px);background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:10px 18px;display:flex;align-items:center;gap:9px;font-size:.8rem;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:9000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.td{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:800;display:none;align-items:center;justify-content:center;backdrop-filter:blur(5px);}
+.modal-bg.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:22px;padding:28px;width:460px;box-shadow:0 32px 80px rgba(0,0,0,.5);animation:mIn .3s cubic-bezier(.34,1.56,.64,1);}
+@keyframes mIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+.m-title{font-family:var(--font-head);font-size:1.1rem;font-weight:800;margin-bottom:20px;}
+.m-lbl{font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px;display:block;}
+.m-inp{width:100%;padding:11px 14px;border-radius:11px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-body);font-size:.87rem;outline:none;cursor:none;transition:border-color .3s;}
+.m-inp:focus{border-color:rgba(245,166,35,.45);}
+.m-inp::placeholder{color:var(--muted2);}
+.m-field{margin-bottom:14px;}
+.m-row{display:flex;gap:10px;}
+.m-row .m-field{flex:1;}
+.m-acts{display:flex;gap:8px;margin-top:20px;}
+.m-cancel{flex:1;padding:11px;border-radius:11px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--font-head);font-size:.8rem;font-weight:700;cursor:none;transition:all .2s;}
+.m-cancel:hover{background:var(--surface2);color:var(--text);}
+.m-save{flex:2;padding:11px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--accent4),#d4870a);color:#fff;font-family:var(--font-head);font-size:.8rem;font-weight:700;cursor:none;transition:all .25s;}
+.m-save:hover{transform:scale(1.02);box-shadow:0 6px 20px rgba(245,166,35,.3);}
+
+/* Drag overlay */
+.drag-ov{position:fixed;inset:0;background:rgba(245,166,35,.06);border:2px dashed rgba(245,166,35,.4);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;backdrop-filter:blur(4px);}
+.drag-ov.show{display:flex;}
+</style>
+</head>
+<body>
+<div id="cur"></div><div id="cur-r"></div>
+<div class="toast" id="toast"><div class="td" id="td"></div><span id="tm"></span></div>
+<div class="drag-ov" id="dragOv">
+  <div style="font-size:2rem">📂</div>
+  <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:800;color:var(--accent4)">Drop to extract reminders</div>
+  <div style="font-size:.8rem;color:var(--muted)">PDF, PPTX, DOCX, MD, TXT</div>
+</div>
+<input type="file" id="fileIn" multiple accept=".pdf,.pptx,.docx,.md,.txt" style="display:none" onchange="extractFromFiles(this.files)"/>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="m-title">🔔 New Reminder</div>
+    <div class="m-field"><label class="m-lbl">Title</label><input class="m-inp" id="mTitle" placeholder="e.g. Submit OS Assignment"/></div>
+    <div class="m-field"><label class="m-lbl">Description</label><input class="m-inp" id="mDesc" placeholder="Optional notes..."/></div>
+    <div class="m-row">
+      <div class="m-field"><label class="m-lbl">Date & Time</label><input class="m-inp" id="mDate" type="datetime-local"/></div>
+      <div class="m-field"><label class="m-lbl">Priority</label>
+        <select class="m-inp" id="mPri"><option value="high">🔴 High</option><option value="med" selected>🟡 Medium</option><option value="low">🔵 Low</option></select>
+      </div>
+    </div>
+    <div class="m-field"><label class="m-lbl">Category</label>
+      <select class="m-inp" id="mCat"><option>Assignment</option><option>Exam</option><option>Project</option><option>Study</option><option>Meeting</option><option>Personal</option></select>
+    </div>
+    <div class="m-acts">
+      <button class="m-cancel" onclick="closeModal()">Cancel</button>
+      <button class="m-save" onclick="saveModal()">Save Reminder →</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- HEADER -->
+  <header>
+    <a href="dashboard.html" class="h-logo">NEXUS</a>
+    <div class="h-nav">
+      <button class="hn-btn" onclick="location.href='planner.html'">📅 Smart Planner</button>
+      <button class="hn-btn active">🔔 Reminders</button>
+      <button class="hn-btn" onclick="location.href='deepquery.html'">⚡ Deep Query</button>
+      <button class="hn-btn" onclick="location.href='summaries.html'">✨ Summaries</button>
+    </div>
+    <div class="h-right">
+      <div class="notif-status"><div class="n-dot" id="nDot"></div><span id="nTxt">Notifications off</span></div>
+      <a href="dashboard.html" class="back-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Dashboard
+      </a>
+      <button class="enable-btn" onclick="reqNotif()">🔔 Enable Alerts</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR — stats & categories only -->
+  <aside class="sidebar">
+    <div class="sb-header">
+      <div class="sb-title">Overview</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="s-card overdue clickable" onclick="setFilter('overdue')">
+        <div class="s-val" id="svOv">0</div>
+        <div class="s-lbl">Overdue</div>
+      </div>
+      <div class="s-card today clickable" onclick="setFilter('today')">
+        <div class="s-val" id="svTd">0</div>
+        <div class="s-lbl">Today</div>
+      </div>
+      <div class="s-card upcoming clickable" onclick="setFilter('upcoming')">
+        <div class="s-val" id="svUp">0</div>
+        <div class="s-lbl">Upcoming</div>
+      </div>
+      <div class="s-card done clickable" onclick="setFilter('done')">
+        <div class="s-val" id="svDn">0</div>
+        <div class="s-lbl">Done</div>
+      </div>
+    </div>
+
+    <!-- Completion ring -->
+    <div class="prog-wrap">
+      <svg class="prog-ring-svg" width="90" height="90" viewBox="0 0 90 90">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#7c6bff"/>
+            <stop offset="100%" stop-color="#00d4aa"/>
+          </linearGradient>
+        </defs>
+        <circle class="prog-ring-bg" cx="45" cy="45" r="36"/>
+        <circle class="prog-ring-fill" id="ringFill" cx="45" cy="45" r="36" stroke-dasharray="226" stroke-dashoffset="226"/>
+      </svg>
+      <div class="prog-center">
+        <div class="prog-pct" id="progPct">0%</div>
+        <div class="prog-lbl">Completed</div>
+      </div>
+    </div>
+
+    <div class="sb-div"></div>
+    <div class="sb-sec-lbl">By Category</div>
+    <div class="cat-list" id="catList"></div>
+
+    <div class="sb-upload">
+      <button class="sb-upload-btn" onclick="document.getElementById('fileIn').click()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Extract from File
+      </button>
+    </div>
+  </aside>
+
+  <!-- CENTER -->
+  <main class="main-col">
+    <div class="filter-bar">
+      <button class="f-btn active" id="fAll" onclick="setFilter('all')">All <span class="f-count" id="fcAll">0</span></button>
+      <button class="f-btn" id="fOverdue" onclick="setFilter('overdue')">🔴 Overdue <span class="f-count" id="fcOv">0</span></button>
+      <button class="f-btn" id="fToday" onclick="setFilter('today')">🟡 Today <span class="f-count" id="fcTd">0</span></button>
+      <button class="f-btn" id="fUpcoming" onclick="setFilter('upcoming')">🔵 Upcoming <span class="f-count" id="fcUp">0</span></button>
+      <button class="f-btn" id="fDone" onclick="setFilter('done')">✅ Done <span class="f-count" id="fcDn">0</span></button>
+      <div class="f-spacer"></div>
+      <select class="sort-sel" onchange="render()">
+        <option value="date">Sort: Date</option>
+        <option value="priority">Sort: Priority</option>
+      </select>
+    </div>
+
+    <div class="rem-scroll" id="remScroll"></div>
+
+    <!-- SINGLE add bar — no duplicate -->
+    <div class="add-bar">
+      <div class="add-row">
+        <input class="add-inp" id="qTitle" placeholder="Quick add — type a reminder title and press Enter..." onkeydown="if(event.key==='Enter')qAdd()"/>
+        <input class="add-dt" id="qDate" type="datetime-local"/>
+        <select class="add-pri" id="qPri">
+          <option value="high">🔴 High</option>
+          <option value="med" selected>🟡 Med</option>
+          <option value="low">🔵 Low</option>
+        </select>
+        <button class="add-save" onclick="qAdd()">Add →</button>
+      </div>
+      <div class="add-hint">
+        <kbd>Enter</kbd> quick add &nbsp;·&nbsp;
+        <span style="color:var(--accent4);cursor:none;font-size:.65rem;" onclick="openModal()">+ Detailed reminder</span>
+        &nbsp;·&nbsp; Drag & drop files to auto-extract
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+    <div class="rp-sec"><div class="rp-lbl">🔔 Push Alerts</div></div>
+    <div class="nc" id="nc">
+      <div class="nc-title">Browser Notifications</div>
+      <div class="nc-sub">Get alerted even when you're on YouTube or another tab — the moment a deadline hits.</div>
+      <button class="nc-btn" id="ncBtn" onclick="reqNotif()">Enable Notifications</button>
+    </div>
+
+    <div class="rp-div"></div>
+    <div class="rp-sec"><div class="rp-lbl">📅 Upcoming</div></div>
+    <div class="tl" id="tl"><div style="font-size:.72rem;color:var(--muted2);padding:4px 0 4px 28px;">Nothing coming up</div></div>
+
+    <div class="rp-div"></div>
+    <div class="rp-sec"><div class="rp-lbl">📣 Alert Log</div></div>
+    <div class="nl" id="nl"><div style="font-size:.72rem;color:var(--muted2);padding:4px 0;">No alerts sent yet.</div></div>
+  </aside>
+</div>
+
+<script>
+  const BACKEND_URL = "http://127.0.0.1:5000";
+// Cursor
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-r');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+(function loop(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(loop);})();
+
+// Theme
+if(localStorage.getItem('nexus-theme')==='light') document.body.classList.add('light');
+
+// Toast
+let tTimer;
+function t2(msg,color='var(--accent4)'){document.getElementById('tm').textContent=msg;document.getElementById('td').style.background=color;const t=document.getElementById('toast');t.classList.add('show');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+
+// Data
+let reminders=[];
+let filterMode='all';
+const priColors={high:'var(--accent3)',med:'var(--accent4)',low:'var(--accent)'};
+const priClass={high:'ph',med:'pm',low:'pl'};
+const priLabel={high:'HIGH',med:'MED',low:'LOW'};
+const catColors=['#7c6bff','#00d4aa','#ff6b6b','#f5a623','#a78bfa','#60d4ff'];
+
+function off(days,hr=10){const d=new Date();d.setDate(d.getDate()+days);d.setHours(hr,0,0,0);return d.toISOString().slice(0,16);}
+
+function status(r){
+  if(r.done) return 'done';
+  const now=new Date(),due=new Date(r.date);
+  if(due.toDateString()===now.toDateString()) return 'today';
+  if(due<now) return 'overdue';
+  return 'upcoming';
+}
+
+function fmtDate(s){
+  const d=new Date(s);
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+
+function timeLeft(s){
+  const diff=new Date(s)-new Date();
+  if(diff<0) return '⚠ Overdue';
+  const h=Math.floor(diff/3600000),d=Math.floor(h/24);
+  if(d>0) return `in ${d}d`;
+  if(h>0) return `in ${h}h`;
+  return 'due soon';
+}
+
+// Render
+function render(){
+  const scroll=document.getElementById('remScroll');
+  const sortVal=document.querySelector('.sort-sel')?.value||'date';
+  let list=reminders.filter(r=>{
+    if(filterMode==='all') return true;
+    if(filterMode==='done') return r.done;
+    return status(r)===filterMode&&!r.done;
+  });
+  if(sortVal==='priority'){const o={high:0,med:1,low:2};list.sort((a,b)=>o[a.priority]-o[b.priority]);}
+  else list.sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  scroll.innerHTML='';
+  if(!list.length){
+    scroll.innerHTML=`<div class="empty-main"><div class="em-ico">🔔</div><div class="em-t">Nothing here</div><div class="em-s">Try a different filter or add a reminder below.</div></div>`;
+    updateStats();renderCats();renderTimeline();updateRing();return;
+  }
+
+  list.forEach(r=>{
+    const st=status(r);
+    const card=document.createElement('div');
+    card.className=`rem-card ${r.done?'done':st}`;
+    card.id='c_'+r.id;
+    let stBadge='';
+    if(st==='overdue'&&!r.done) stBadge=`<span class="rc-status overdue">⚠ Overdue</span>`;
+    else if(st==='today'&&!r.done) stBadge=`<span class="rc-status today">⏰ Due Today</span>`;
+    card.innerHTML=`
+      <div class="rc-chk ${r.done?'on':''}" id="chk_${r.id}" onclick="toggleDone('${r.id}')"></div>
+      <div class="rc-body">
+        <div class="rc-row1">
+          <div class="rc-title">${r.title}</div>
+          <span class="rc-pri ${priClass[r.priority]}">${priLabel[r.priority]}</span>
+          ${r.source?`<span class="rc-src">📄 ${r.source}</span>`:''}
+          ${stBadge}
+        </div>
+        ${r.desc?`<div class="rc-desc">${r.desc}</div>`:''}
+        <div class="rc-meta">
+          <div class="rc-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>${fmtDate(r.date)}</div>
+          <span class="rc-cat">${r.category}</span>
+          ${!r.done?`<span class="rc-left" style="color:${priColors[r.priority]}">${timeLeft(r.date)}</span>`:''}
+        </div>
+      </div>
+      <div class="rc-acts">
+        <button class="rc-act snz" onclick="snooze('${r.id}')" title="Snooze 10 min">⏰</button>
+        <button class="rc-act del" onclick="del('${r.id}')" title="Delete">🗑</button>
+      </div>`;
+    scroll.appendChild(card);
+  });
+  updateStats();renderCats();renderTimeline();updateRing();
+}
+
+function updateStats(){
+  const ov=reminders.filter(r=>!r.done&&status(r)==='overdue').length;
+  const td=reminders.filter(r=>!r.done&&status(r)==='today').length;
+  const up=reminders.filter(r=>!r.done&&status(r)==='upcoming').length;
+  const dn=reminders.filter(r=>r.done).length;
+  document.getElementById('svOv').textContent=ov;
+  document.getElementById('svTd').textContent=td;
+  document.getElementById('svUp').textContent=up;
+  document.getElementById('svDn').textContent=dn;
+  document.getElementById('fcAll').textContent=reminders.length;
+  document.getElementById('fcOv').textContent=ov;
+  document.getElementById('fcTd').textContent=td;
+  document.getElementById('fcUp').textContent=up;
+  document.getElementById('fcDn').textContent=dn;
+}
+
+function updateRing(){
+  const total=reminders.length;
+  const done=reminders.filter(r=>r.done).length;
+  const pct=total===0?0:Math.round((done/total)*100);
+  const circ=226;
+  const offset=circ-(circ*pct/100);
+  document.getElementById('ringFill').style.strokeDashoffset=offset;
+  document.getElementById('progPct').textContent=pct+'%';
+}
+
+function renderCats(){
+  const cats={};
+  reminders.forEach(r=>{cats[r.category]=(cats[r.category]||0)+1;});
+  const list=document.getElementById('catList');list.innerHTML='';
+  Object.entries(cats).sort((a,b)=>b[1]-a[1]).forEach(([cat,cnt],i)=>{
+    const el=document.createElement('div');el.className='cat-row';
+    el.innerHTML=`<div class="cat-left"><div class="cat-dot" style="background:${catColors[i%catColors.length]}"></div><div class="cat-name">${cat}</div></div><div class="cat-count">${cnt}</div>`;
+    el.onclick=()=>{};list.appendChild(el);
+  });
+  if(!Object.keys(cats).length) list.innerHTML='<div style="font-size:.72rem;color:var(--muted2);padding:4px 0;">No categories yet</div>';
+}
+
+function renderTimeline(){
+  const tl=document.getElementById('tl');tl.innerHTML='';
+  const items=reminders.filter(r=>!r.done&&(status(r)==='upcoming'||status(r)==='today'))
+    .sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,5);
+  if(!items.length){tl.innerHTML='<div style="font-size:.72rem;color:var(--muted2);padding:4px 0 4px 28px;">Nothing coming up</div>';return;}
+  items.forEach(r=>{
+    const st=status(r);
+    const col=st==='today'?'var(--accent4)':'var(--accent)';
+    const el=document.createElement('div');el.className='tl-item';
+    el.innerHTML=`<div class="tl-dot" style="background:${col};border-color:${col}"></div><div class="tl-info"><div class="tl-t">${r.title}</div><div class="tl-d">${fmtDate(r.date)}</div><span class="tl-badge" style="background:rgba(124,107,255,.1);color:var(--accent)">${r.category}</span></div>`;
+    tl.appendChild(el);
+  });
+}
+
+// CRUD
+function addRem(data, skipRender=false){
+  const id='r_'+Date.now()+'_'+Math.random().toString(36).substr(2,4);
+  reminders.push({id,...data,done:false});
+  if(!skipRender) render();
+  schedNotif(reminders[reminders.length-1]);
+}
+function toggleDone(id){
+  const r=reminders.find(x=>x.id===id);if(!r)return;
+  r.done=!r.done;render();
+  t2(r.done?'Marked done ✓':'Marked pending','var(--accent2)');
+}
+function del(id){
+  const card=document.getElementById('c_'+id);
+  if(card){card.style.opacity='0';card.style.transform='translateX(-14px)';card.style.transition='all .3s';setTimeout(()=>{reminders=reminders.filter(x=>x.id!==id);render();},300);}
+  t2('Reminder deleted','var(--accent3)');
+}
+function snooze(id){
+  const r=reminders.find(x=>x.id===id);if(!r)return;
+  const d=new Date(r.date);d.setMinutes(d.getMinutes()+10);
+  r.date=d.toISOString().slice(0,16);render();
+  t2('Snoozed 10 min ⏰','var(--accent4)');schedNotif(r);
+}
+
+// Filter
+function setFilter(mode){
+  filterMode=mode;
+  ['fAll','fOverdue','fToday','fUpcoming','fDone'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  const map={all:'fAll',overdue:'fOverdue',today:'fToday',upcoming:'fUpcoming',done:'fDone'};
+  document.getElementById(map[mode])?.classList.add('active');
+  render();
+}
+
+// Quick add
+function qAdd(){
+  const title=document.getElementById('qTitle').value.trim();
+  if(!title){document.getElementById('qTitle').style.borderColor='var(--accent3)';setTimeout(()=>document.getElementById('qTitle').style.borderColor='',1500);return;}
+  const date=document.getElementById('qDate').value||off(1);
+  const priority=document.getElementById('qPri').value;
+  addRem({title,desc:'',date,priority,category:'Personal',source:''});
+  document.getElementById('qTitle').value='';
+  t2(title+' added ✓','var(--accent4)');
+}
+
+// Modal
+function openModal(){
+  document.getElementById('mDate').value=off(1);
+  document.getElementById('modalBg').classList.add('show');
+  setTimeout(()=>document.getElementById('mTitle').focus(),100);
+}
+function closeModal(){document.getElementById('modalBg').classList.remove('show');}
+function saveModal(){
+  const title=document.getElementById('mTitle').value.trim();
+  if(!title){document.getElementById('mTitle').style.borderColor='var(--accent3)';return;}
+  addRem({title,desc:document.getElementById('mDesc').value.trim(),date:document.getElementById('mDate').value||off(1),priority:document.getElementById('mPri').value,category:document.getElementById('mCat').value,source:''});
+  document.getElementById('mTitle').value='';document.getElementById('mDesc').value='';
+  closeModal();
+}
+document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===document.getElementById('modalBg'))closeModal();});
+
+// Notifications
+let notifOn=false;
+function reqNotif(){
+  if(!('Notification' in window)){t2('Browser notifications not supported','var(--accent3)');return;}
+  Notification.requestPermission().then(p=>{
+    if(p==='granted'){
+      notifOn=true;updateNotifUI(true);
+      t2('Notifications enabled! You\'ll be alerted on any tab 🔔','var(--accent2)');
+      reminders.forEach(r=>{if(!r.done)schedNotif(r);});
+    } else t2('Permission denied','var(--accent3)');
+  });
+}
+function updateNotifUI(on){
+  document.getElementById('nDot').classList.toggle('on',on);
+  document.getElementById('nTxt').textContent=on?'Notifications on':'Notifications off';
+  document.getElementById('nc').innerHTML=on
+    ?`<div class="nc-title">Browser Notifications</div><div class="nc-ok">✅ Active — alerts will fire on any tab!</div>`
+    :`<div class="nc-title">Browser Notifications</div><div class="nc-sub">Get alerted even when on YouTube or another tab.</div><button class="nc-btn" onclick="reqNotif()">Enable Notifications</button>`;
+}
+function schedNotif(r){
+  if(!notifOn||r.done) return;
+  const delay=new Date(r.date)-Date.now();
+  if(delay<=0||delay>86400000) return;
+  if(delay>1800000) setTimeout(()=>fireNotif('⏰ 30 min warning',`"${r.title}" is due in 30 minutes!`,r),delay-1800000);
+  setTimeout(()=>fireNotif('🔔 Due Now!',`"${r.title}" is due now!`,r),delay);
+}
+function fireNotif(title,body,r){
+  if(!notifOn) return;
+  new Notification(title,{body,tag:r.id,requireInteraction:true});
+  addLog(title,body);
+  t2(`${title}: ${r.title}`,'var(--accent4)');
+}
+function addLog(title,body){
+  const log=document.getElementById('nl');
+  if(log.firstChild?.style?.color) log.innerHTML='';
+  const el=document.createElement('div');el.className='nl-item';
+  el.innerHTML=`<div class="nl-ico">🔔</div><div><div class="nl-t">${title}</div><div class="nl-s">${body}</div></div>`;
+  log.insertBefore(el,log.firstChild);
+}
+if('Notification' in window&&Notification.permission==='granted'){notifOn=true;updateNotifUI(true);}
+
+
+async function extractFromFiles(files){
+  Array.from(files).forEach(async(f,i)=>{
+    setTimeout(async()=>{
+      t2('Uploading '+f.name+'...','var(--accent)');
+      const formData=new FormData();
+      formData.append('file',f);
+      try{
+        const uploadRes=await fetch(`${BACKEND_URL}/upload`,{method:'POST',body:formData});
+        const uploadData=await uploadRes.json();
+        if(uploadData.error){t2(uploadData.error,'var(--accent3)');return;}
+        t2('Extracting from '+f.name+'...','var(--accent4)');
+
+        const queryRes=await fetch(`${BACKEND_URL}/query`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({question:'From the file '+f.name+', list deadlines in this exact format only - "TASK: [task name only] | DATE: [date] | TIME: [time or none]". One line per item. No intro. No extra text. Example: "TASK: Submit assignment | DATE: 28 March 2026 | TIME: 2:00 PM"'})
+        });
+        const queryData=await queryRes.json();
+        if(queryData.error){t2(queryData.error,'var(--accent3)');return;}
+
+        const lines=queryData.answer.split('\n')
+          .filter(l=>l.includes('TASK:'))
+          .slice(0,3);
+
+        lines.forEach((line,idx)=>{
+          const taskMatch=line.match(/TASK:\s*([^|]+)/i);
+          const dateMatch=line.match(/DATE:\s*([^|]+)/i);
+          const timeMatch=line.match(/TIME:\s*([^|]+)/i);
+
+          if(!taskMatch) return;
+
+          const title=taskMatch[1].trim().slice(0,80);
+          const alreadyExists=reminders.some(r=>r.title.toLowerCase().includes(title.toLowerCase().slice(0,15)));
+          if(alreadyExists) return;
+
+          let date=off(idx+1);
+          if(dateMatch){
+            const dateStr=dateMatch[1].trim().replace(/(\d+)(st|nd|rd|th)/i,'$1');
+            const timeStr=timeMatch?timeMatch[1].trim().replace(/none/i,''):'';
+            const fullStr=timeStr?dateStr+' '+timeStr:dateStr;
+            const parsed=new Date(fullStr);
+            if(!isNaN(parsed)) date=parsed.toISOString().slice(0,16);
+          }
+
+          addRem({title,desc:'',date,priority:'med',category:'Assignment',source:f.name}, true);
+        });
+        render();
+        t2('Done extracting from '+f.name+' ✓','var(--accent2)');
+
+      }catch(err){
+        t2('Upload failed — is Flask running?','var(--accent3)');
+      }
+    },i*600);
+  });
+} 
+// Drag & drop
+let dragCount=0;
+document.addEventListener('dragenter',e=>{e.preventDefault();dragCount++;document.getElementById('dragOv').classList.add('show');});
+document.addEventListener('dragleave',e=>{dragCount--;if(dragCount===0)document.getElementById('dragOv').classList.remove('show');});
+document.addEventListener('dragover',e=>{e.preventDefault();});
+document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dragOv').classList.remove('show');extractFromFiles(e.dataTransfer.files);});
+
+// Check due every minute
+setInterval(()=>{
+  const now=new Date();
+  reminders.forEach(r=>{
+    if(r.done||r._alerted) return;
+    if(Math.abs(new Date(r.date)-now)<60000){r._alerted=true;if(notifOn)fireNotif('🔔 Due Now!',`"${r.title}" is due!`,r);t2(`⏰ "${r.title}" is due now!`,'var(--accent4)');}
+  });
+},60000);
+
+render();
+</script>
+</body>
+</html>

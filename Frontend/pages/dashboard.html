@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXUS — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #050508;
+  --surface: #0d0d14;
+  --surface2: #111118;
+  --surface3: #16161f;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.11);
+  --accent: #7c6bff;
+  --accent2: #00d4aa;
+  --accent3: #ff6b6b;
+  --accent4: #f5a623;
+  --text: #f0eeff;
+  --muted: rgba(240,238,255,0.45);
+  --muted2: rgba(240,238,255,0.22);
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --header-h: 58px;
+  --sidebar-w: 260px;
+  --right-w: 280px;
+}
+
+/* Light theme */
+body.light {
+  --bg: #f5f4ff;
+  --surface: #ffffff;
+  --surface2: #f0eeff;
+  --surface3: #e8e6ff;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.13);
+  --text: #1a1830;
+  --muted: rgba(26,24,48,0.5);
+  --muted2: rgba(26,24,48,0.25);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);cursor:none;transition:background 0.4s,color 0.4s;}
+
+/* ── Cursor ── */
+#cursor{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .25s,height .25s,background .25s;}
+body.light #cursor{background:#1a1830;}
+body.light #cursor-ring{border-color:rgba(26,24,48,.35);}
+#cursor-ring{position:fixed;top:0;left:0;width:28px;height:28px;border:1.5px solid rgba(124,107,255,.5);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .3s,height .3s,border-color .3s;}
+body:has(button:hover) #cursor,body:has(a:hover) #cursor{width:14px;height:14px;background:var(--accent2);}
+body:has(button:hover) #cursor-ring,body:has(a:hover) #cursor-ring{width:44px;height:44px;border-color:var(--accent2);}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:0.022;pointer-events:none;z-index:99997;}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-rows:var(--header-h) 1fr;grid-template-columns:var(--sidebar-w) 1fr var(--right-w);height:100vh;gap:0;}
+
+/* ── HEADER ── */
+header{grid-column:1/-1;grid-row:1;display:flex;align-items:center;justify-content:space-between;padding:0 20px 0 20px;border-bottom:1px solid var(--border);background:var(--surface);position:relative;z-index:200;}
+.h-logo{font-family:var(--font-head);font-size:1.25rem;font-weight:800;letter-spacing:.12em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;cursor:none;}
+.h-center{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;}
+.h-badge{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);padding:4px 10px;border-radius:100px;border:1px solid rgba(0,212,170,.25);background:rgba(0,212,170,.06);}
+.h-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+
+/* Profile button */
+.profile-btn{display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:100px;border:1px solid var(--border2);background:var(--surface2);cursor:none;transition:background .25s,border-color .25s;}
+.profile-btn:hover{background:var(--surface3);border-color:rgba(124,107,255,.3);}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0;}
+.profile-name{font-size:.82rem;font-weight:500;color:var(--text);}
+.profile-chevron{width:14px;height:14px;color:var(--muted);transition:transform .3s;}
+.profile-chevron.open{transform:rotate(180deg);}
+
+/* ── PROFILE POPUP ── */
+.profile-popup{position:absolute;top:calc(var(--header-h) + 8px);right:20px;width:300px;background:var(--surface);border:1px solid var(--border2);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.5);z-index:500;opacity:0;transform:translateY(-12px) scale(.97);transition:opacity .3s cubic-bezier(.4,0,.2,1),transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;overflow:hidden;}
+.profile-popup.open{opacity:1;transform:translateY(0) scale(1);pointer-events:all;}
+.pp-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;}
+.pp-avatar-lg{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:1.1rem;font-weight:800;color:#fff;flex-shrink:0;}
+.pp-name{font-family:var(--font-head);font-size:1rem;font-weight:700;}
+.pp-email{font-size:.75rem;color:var(--muted);margin-top:2px;}
+.pp-body{padding:8px;}
+.pp-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;cursor:none;transition:background .2s;position:relative;}
+.pp-item:hover{background:rgba(124,107,255,.08);}
+.pp-item-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.pp-item-text{flex:1;}
+.pp-item-label{font-size:.85rem;font-weight:500;}
+.pp-item-sub{font-size:.7rem;color:var(--muted);margin-top:1px;}
+.pp-item-arrow{width:14px;height:14px;color:var(--muted2);}
+.pp-divider{height:1px;background:var(--border);margin:6px 12px;}
+.pp-logout{color:var(--accent3) !important;}
+.pp-logout .pp-item-icon{background:rgba(255,107,107,.1);}
+.pp-logout:hover{background:rgba(255,107,107,.08) !important;}
+
+/* Theme toggle inside popup */
+.theme-toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border-radius:12px;cursor:none;transition:background .2s;}
+.theme-toggle-wrap:hover{background:rgba(124,107,255,.08);}
+.theme-toggle-left{display:flex;align-items:center;gap:12px;}
+.theme-pill{width:42px;height:24px;border-radius:100px;background:var(--surface3);border:1px solid var(--border2);position:relative;cursor:none;transition:background .3s;}
+.theme-pill.on{background:var(--accent);}
+.theme-pill-thumb{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.theme-pill.on .theme-pill-thumb{transform:translateX(18px);}
+
+/* ── LEFT SIDEBAR ── */
+.sidebar{grid-column:1;grid-row:2;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;animation:slideInLeft .5s ease .1s both;}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:translateX(0);}}
+.sidebar-top{padding:16px;}
+
+/* Upload button */
+.upload-btn{width:100%;padding:12px 16px;border-radius:14px;border:1.5px dashed rgba(124,107,255,.4);background:rgba(124,107,255,.05);color:var(--accent);cursor:none;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-head);font-size:.82rem;font-weight:700;letter-spacing:.05em;transition:background .3s,border-color .3s,transform .25s cubic-bezier(.34,1.56,.64,1);}
+.upload-btn:hover{background:rgba(124,107,255,.12);border-color:var(--accent);transform:scale(1.02);}
+.upload-btn svg{width:16px;height:16px;}
+
+/* File type chips */
+.file-types{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;padding:0 2px;}
+.ft{font-size:.6rem;padding:3px 7px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+
+.sidebar-section-label{font-size:.65rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted2);padding:12px 16px 6px;font-weight:600;}
+
+/* Resource list */
+.resource-list{flex:1;overflow-y:auto;padding:0 10px 16px;}
+.resource-list::-webkit-scrollbar{width:3px;}
+.resource-list::-webkit-scrollbar-thumb{background:rgba(124,107,255,.2);border-radius:2px;}
+.resource-item{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:12px;cursor:none;transition:background .2s;margin-bottom:3px;position:relative;}
+.resource-item:hover{background:var(--surface2);}
+.resource-item.active{background:rgba(124,107,255,.1);border:1px solid rgba(124,107,255,.2);}
+.file-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;}
+.file-meta{flex:1;min-width:0;}
+.file-name{font-size:.8rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-size{font-size:.65rem;color:var(--muted);margin-top:2px;}
+.file-remove{width:20px;height:20px;border-radius:50%;border:none;background:transparent;color:var(--muted2);cursor:none;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s,background .2s;font-size:.7rem;}
+.resource-item:hover .file-remove{opacity:1;}
+.file-remove:hover{background:rgba(255,107,107,.15);color:var(--accent3);}
+
+/* Empty state */
+.empty-state{padding:24px 16px;text-align:center;}
+.empty-icon{font-size:2rem;margin-bottom:10px;opacity:.4;}
+.empty-text{font-size:.78rem;color:var(--muted);line-height:1.6;}
+
+/* Upload progress bar */
+.upload-progress{margin:8px 16px;display:none;}
+.upload-progress.show{display:block;}
+.up-label{font-size:.68rem;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;}
+.up-bar{height:3px;border-radius:100px;background:var(--surface3);}
+.up-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .3s ease;}
+
+/* ── CENTER CHAT ── */
+.chat-area{grid-column:2;grid-row:2;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;animation:fadeIn .5s ease .2s both;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+/* Subtle bg grid */
+.chat-area::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(124,107,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,107,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
+
+/* Context bar */
+.context-bar{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface);flex-shrink:0;}
+.ctx-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);}
+.ctx-chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);font-size:.7rem;color:var(--muted);}
+.ctx-chip-dot{width:5px;height:5px;border-radius:50%;}
+
+/* Messages */
+.messages{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.messages::-webkit-scrollbar{width:3px;}
+.messages::-webkit-scrollbar-thumb{background:rgba(124,107,255,.15);border-radius:2px;}
+
+/* Welcome state */
+.welcome-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center;}
+.welcome-icon{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,rgba(124,107,255,.15),rgba(0,212,170,.1));border:1px solid rgba(124,107,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:8px;animation:floatIcon 3s ease-in-out infinite;}
+@keyframes floatIcon{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.welcome-title{font-family:var(--font-head);font-size:1.4rem;font-weight:800;letter-spacing:-.01em;}
+.welcome-sub{font-size:.88rem;color:var(--muted);max-width:380px;line-height:1.7;}
+.starter-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;}
+.starter-chip{padding:8px 16px;border-radius:100px;border:1px solid var(--border2);background:var(--surface);font-size:.78rem;color:var(--muted);cursor:none;transition:background .25s,border-color .25s,color .25s;white-space:nowrap;}
+.starter-chip:hover{background:rgba(124,107,255,.1);border-color:rgba(124,107,255,.35);color:var(--text);}
+
+/* Message bubbles */
+.msg{display:flex;gap:12px;max-width:82%;animation:msgIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.msg.user{align-self:flex-end;flex-direction:row-reverse;}
+.msg-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;font-family:var(--font-head);}
+.msg.user .msg-avatar{background:linear-gradient(135deg,var(--accent),#5a4fe0);color:#fff;}
+.msg.ai .msg-avatar{background:linear-gradient(135deg,var(--accent2),#00a88a);color:#fff;}
+.msg-bubble{padding:12px 16px;border-radius:16px;font-size:.87rem;line-height:1.65;}
+.msg.user .msg-bubble{background:linear-gradient(135deg,var(--accent),#5a4fe0);color:#fff;border-bottom-right-radius:4px;}
+.msg.ai .msg-bubble{background:var(--surface);border:1px solid var(--border2);color:var(--text);border-bottom-left-radius:4px;}
+.msg-source{font-size:.65rem;color:var(--muted2);margin-top:4px;display:flex;align-items:center;gap:4px;}
+.msg-source-dot{width:4px;height:4px;border-radius:50%;background:var(--accent2);}
+
+/* Typing indicator */
+.typing-indicator{display:flex;gap:4px;align-items:center;padding:12px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;width:fit-content;}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:typingBounce 1.2s ease-in-out infinite;}
+.typing-dot:nth-child(2){animation-delay:.2s;}
+.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-5px);}}
+
+/* Input bar */
+.input-bar{padding:14px 20px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.input-wrap{display:flex;align-items:flex-end;gap:10px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:16px;padding:10px 10px 10px 16px;transition:border-color .3s,box-shadow .3s;}
+.input-wrap:focus-within{border-color:rgba(124,107,255,.5);box-shadow:0 0 0 3px rgba(124,107,255,.08);}
+.chat-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-body);font-size:.9rem;resize:none;max-height:120px;line-height:1.5;cursor:none;}
+.chat-input::placeholder{color:var(--muted2);}
+.input-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.input-btn{width:34px;height:34px;border-radius:10px;border:none;background:transparent;color:var(--muted);cursor:none;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s;}
+.input-btn:hover{background:var(--surface3);color:var(--text);}
+.send-btn{width:38px;height:38px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),#5a4fe0);color:#fff;cursor:none;display:flex;align-items:center;justify-content:center;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;flex-shrink:0;}
+.send-btn:hover{transform:scale(1.08);box-shadow:0 8px 24px rgba(124,107,255,.35);}
+.send-btn:active{transform:scale(.95);}
+.input-hint{font-size:.65rem;color:var(--muted2);margin-top:7px;padding:0 4px;display:flex;align-items:center;gap:6px;}
+kbd{padding:2px 5px;border-radius:4px;border:1px solid var(--border2);font-size:.6rem;font-family:var(--font-body);}
+
+/* ── RIGHT PANEL ── */
+.right-panel{grid-column:3;grid-row:2;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;animation:slideInRight .5s ease .15s both;}
+@keyframes slideInRight{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
+.right-panel::-webkit-scrollbar{width:3px;}
+.right-panel::-webkit-scrollbar-thumb{background:rgba(124,107,255,.15);border-radius:2px;}
+.rp-section{padding:16px 16px 0;}
+.rp-label{font-size:.65rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted2);font-weight:600;margin-bottom:12px;}
+
+/* Quick action cards */
+.qa-grid{display:flex;flex-direction:column;gap:8px;padding:0 16px 16px;}
+.qa-card{padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);cursor:none;transition:background .25s,border-color .25s,transform .25s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:flex-start;gap:11px;}
+.qa-card:hover{background:var(--surface3);border-color:var(--border2);transform:translateX(3px);}
+.qa-card.active-card{border-color:rgba(124,107,255,.35);background:rgba(124,107,255,.07);}
+.qa-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.qa-info{flex:1;}
+.qa-title{font-family:var(--font-head);font-size:.82rem;font-weight:700;margin-bottom:3px;}
+.qa-desc{font-size:.7rem;color:var(--muted);line-height:1.5;}
+.qa-badge{font-size:.58rem;padding:2px 7px;border-radius:100px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:5px;display:inline-block;}
+
+/* Stats strip */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px;}
+.stat-card{padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);}
+.stat-val{font-family:var(--font-head);font-size:1.2rem;font-weight:800;}
+.stat-lbl{font-size:.65rem;color:var(--muted);margin-top:2px;}
+
+/* Section divider */
+.rp-divider{height:1px;background:var(--border);margin:4px 16px 16px;}
+
+/* ── Ripple ── */
+.ripple{position:absolute;border-radius:50%;background:rgba(124,107,255,.25);transform:scale(0);animation:rippleAnim .5s linear;pointer-events:none;}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
+
+/* ── Drag overlay ── */
+.drag-overlay{position:fixed;inset:0;background:rgba(124,107,255,.08);border:2px dashed rgba(124,107,255,.5);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;backdrop-filter:blur(4px);}
+.drag-overlay.show{display:flex;}
+.drag-text{font-family:var(--font-head);font-size:1.4rem;font-weight:800;color:var(--accent);}
+.drag-sub{font-size:.88rem;color:var(--muted);}
+
+/* Entrance animations */
+.qa-card{opacity:0;transform:translateX(16px);animation:cardIn .4s ease forwards;}
+.qa-card:nth-child(1){animation-delay:.3s;}
+.qa-card:nth-child(2){animation-delay:.4s;}
+.qa-card:nth-child(3){animation-delay:.5s;}
+.qa-card:nth-child(4){animation-delay:.6s;}
+@keyframes cardIn{to{opacity:1;transform:translateX(0);}}
+
+/* Toast notification */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:12px 20px;display:flex;align-items:center;gap:10px;font-size:.82rem;box-shadow:0 16px 48px rgba(0,0,0,.4);z-index:9000;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .4s;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<div class="drag-overlay" id="dragOverlay">
+  <div style="font-size:3rem">📂</div>
+  <div class="drag-text">Drop files here</div>
+  <div class="drag-sub">PDF, PPTX, DOCX, MD, PNG, JPG, MP3, MP4 and more</div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="toast-dot" id="toastDot"></div>
+  <span id="toastMsg"></span>
+</div>
+
+<div class="app">
+
+  <header>
+    <div class="h-logo">NEXUS</div>
+    <div class="h-center">
+      <div class="h-dot"></div>
+      <div class="h-badge">RAG Active</div>
+    </div>
+    <div style="position:relative;">
+      <button class="profile-btn" id="profileBtn" onclick="toggleProfile()">
+       <span class="profile-name" id="user-name">Ravi</span>
+        <div class="avatar">RV</div>
+        <svg class="profile-chevron" id="profileChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+
+      <div class="profile-popup" id="profilePopup">
+        <div class="pp-header">
+          <div class="pp-avatar-lg">RV</div>
+          <div>
+            <div class="pp-name" id="user-name-popup">Ravi</div>
+            <div class="pp-email" id="user-email">ravi@example.com</div>
+          </div>
+        </div>
+        <div class="pp-body">
+
+          <div class="pp-item" onclick="window.location.href='profile.html'">
+            <div class="pp-item-icon" style="background:rgba(124,107,255,.12);">👤</div>
+            <div class="pp-item-text">
+              <div class="pp-item-label">My Profile</div>
+              <div class="pp-item-sub">Name, email & account info</div>
+            </div>
+            <svg class="pp-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+
+          <div class="pp-item" onclick="showToast('Opening Knowledge Vault...','var(--accent2)')">
+            <div class="pp-item-icon" style="background:rgba(0,212,170,.1);">🗂️</div>
+            <div class="pp-item-text">
+              <div class="pp-item-label">Knowledge Vault</div>
+              <div class="pp-item-sub">Manage your uploaded files</div>
+            </div>
+            <svg class="pp-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+
+          <div class="pp-item" onclick="showToast('Loading your Activity...','var(--accent4)')">
+            <div class="pp-item-icon" style="background:rgba(245,166,35,.1);">📊</div>
+            <div class="pp-item-text">
+              <div class="pp-item-label">Activity & Usage</div>
+              <div class="pp-item-sub">Queries, storage & insights</div>
+            </div>
+            <svg class="pp-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+
+          <div class="pp-divider"></div>
+
+          <div class="theme-toggle-wrap" onclick="toggleTheme()">
+            <div class="theme-toggle-left">
+              <div class="pp-item-icon" style="background:rgba(124,107,255,.1);width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;">🌙</div>
+              <div class="pp-item-text">
+                <div class="pp-item-label">Dark Mode</div>
+                <div class="pp-item-sub" id="themeLabel">Currently dark</div>
+              </div>
+            </div>
+            <div class="theme-pill" id="themePill">
+              <div class="theme-pill-thumb"></div>
+            </div>
+          </div>
+
+          <div class="pp-divider"></div>
+
+          <div class="pp-item pp-logout" onclick="handleLogout()">
+            <div class="pp-item-icon">🚪</div>
+            <div class="pp-item-text">
+              <div class="pp-item-label">Sign Out</div>
+              <div class="pp-item-sub">See you next time</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <button class="upload-btn" onclick="triggerUpload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Resources
+      </button>
+      <div class="file-types">
+        <span class="ft">PDF</span><span class="ft">PPTX</span><span class="ft">DOCX</span>
+        <span class="ft">MD</span><span class="ft">PNG</span><span class="ft">JPG</span>
+        <span class="ft">MP3</span><span class="ft">MP4</span><span class="ft">TXT</span>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".pdf,.pptx,.docx,.md,.png,.jpg,.jpeg,.mp3,.mp4,.txt" style="display:none" onchange="handleFiles(this.files)"/>
+    </div>
+
+    <div class="upload-progress" id="uploadProgress">
+      <div class="up-label">
+        <span id="uploadLabel">Processing...</span>
+        <span id="uploadPct">0%</span>
+      </div>
+      <div class="up-bar"><div class="up-fill" id="upFill"></div></div>
+    </div>
+
+    <div class="sidebar-section-label">Resources <span id="fileCount" style="color:var(--accent);margin-left:4px;">0</span></div>
+
+    <div class="resource-list" id="resourceList">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">📁</div>
+        <div class="empty-text">No resources yet.<br>Upload files to power your AI queries.</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="chat-area">
+
+    <div class="context-bar" id="contextBar">
+      <span class="ctx-label">Context:</span>
+      <div class="ctx-chip" id="ctxChip">
+        <div class="ctx-chip-dot" style="background:var(--muted2)"></div>
+        No files loaded
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="welcome-state" id="welcomeState">
+        <div class="welcome-icon">🧠</div>
+        <h2 class="welcome-title">What do you want to know?</h2>
+        <p class="welcome-sub">Upload your documents, notes or meeting transcripts on the left — then ask anything. NEXUS retrieves answers only from your data.</p>
+        <div class="starter-chips">
+          <button class="starter-chip" onclick="useStarter(this)">Summarize my notes</button>
+          <button class="starter-chip" onclick="useStarter(this)">What are the key deadlines?</button>
+          <button class="starter-chip" onclick="useStarter(this)">Create a study plan</button>
+          <button class="starter-chip" onclick="useStarter(this)">Find action items</button>
+          <button class="starter-chip" onclick="useStarter(this)">List all topics covered</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-wrap">
+        <textarea class="chat-input" id="chatInput" placeholder="Ask anything about your documents..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <div class="input-actions">
+          <button class="input-btn" title="Attach file" onclick="triggerUpload()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-hint">
+        <kbd>Enter</kbd> to send &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> for new line &nbsp;·&nbsp; Answers sourced only from your files
+      </div>
+    </div>
+  </main>
+
+  <aside class="right-panel">
+
+    <div class="rp-section">
+      <div class="rp-label">Quick Tools</div>
+    </div>
+    <div class="qa-grid">
+
+     <div class="qa-card" onclick="window.location.href='planner.html'">
+  <div class="qa-icon" style="background:rgba(124,107,255,.12);">📅</div>
+  <div class="qa-info">
+    <div class="qa-title">Smart Planner</div>
+    <div class="qa-desc">Auto-build your study or work schedule from uploaded calendars</div>
+    <span class="qa-badge" style="background:rgba(124,107,255,.12);color:var(--accent);">AI Powered</span>
+  </div>
+</div>
+
+      <div class="qa-card" onclick="window.location.href='reminders.html'">
+        <div class="qa-icon" style="background:rgba(245,166,35,.1);">🔔</div>
+        <div class="qa-info">
+          <div class="qa-title">Smart Reminders</div>
+          <div class="qa-desc">Extract deadlines & events from your docs and set alerts</div>
+          <span class="qa-badge" style="background:rgba(245,166,35,.1);color:var(--accent4);">Auto-detect</span>
+        </div>
+      </div>
+
+      <div class="qa-card" onclick="window.location.href='deepquery.html'">
+        <div class="qa-icon" style="background:rgba(0,212,170,.1);">⚡</div>
+        <div class="qa-info">
+          <div class="qa-title">Deep Query</div>
+          <div class="qa-desc">Multi-document reasoning and cross-file analysis</div>
+          <span class="qa-badge" style="background:rgba(0,212,170,.1);color:var(--accent2);">RAG</span>
+        </div>
+      </div>
+
+      <div class="qa-card" onclick="window.location.href='summaries.html'">
+        <div class="qa-icon" style="background:rgba(255,107,107,.1);">✨</div>
+        <div class="qa-info">
+          <div class="qa-title">Instant Summary</div>
+          <div class="qa-desc">Compress lengthy docs into sharp, structured takeaways</div>
+          <span class="qa-badge" style="background:rgba(255,107,107,.1);color:var(--accent3);">1-click</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="rp-divider"></div>
+
+    <div class="rp-section">
+      <div class="rp-label">Session Stats</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val" id="statFiles" style="color:var(--accent);">0</div>
+        <div class="stat-lbl">Files Loaded</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statQueries" style="color:var(--accent2);">0</div>
+        <div class="stat-lbl">Queries</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statTokens" style="color:var(--accent4);">0</div>
+        <div class="stat-lbl">Insights</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--accent3);font-size:.9rem;">Active</div>
+        <div class="stat-lbl">RAG Status</div>
+      </div>
+    </div>
+
+    <div class="rp-divider"></div>
+
+    <div style="padding:0 16px 20px;">
+      <div style="padding:14px;border-radius:14px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.15);">
+        <div style="font-size:.68rem;color:var(--accent2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;font-weight:600;">💚 Wellness</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.55;" id="wellnessMsg">You're all set. Stay hydrated and take a short break every 90 min!</div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+  // ── Backend URL ──
+const BACKEND_URL = "http://127.0.0.1:5000";
+// ── Cursor ──
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+// Read user info from URL params (from Google OAuth)
+const urlParams = new URLSearchParams(window.location.search);
+const userName = urlParams.get('name');
+const userEmail = urlParams.get('email');
+const userPicture = urlParams.get('picture');
+
+// Clean the URL immediately to stop reload loop
+if(userName) {
+  window.history.replaceState({}, document.title, window.location.pathname);
+  // Save to localStorage for use across pages
+  localStorage.setItem('nexus-user-name', userName);
+  localStorage.setItem('nexus-user-email', userEmail);
+  localStorage.setItem('nexus-user-picture', userPicture);
+}
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
+(function loop(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+
+// ── Profile popup ──
+let profileOpen=false;
+function toggleProfile(){
+  profileOpen=!profileOpen;
+  document.getElementById('profilePopup').classList.toggle('open',profileOpen);
+  document.getElementById('profileChevron').classList.toggle('open',profileOpen);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#profileBtn')&&!e.target.closest('#profilePopup')){
+    profileOpen=false;
+    document.getElementById('profilePopup').classList.remove('open');
+    document.getElementById('profileChevron').classList.remove('open');
+  }
+});
+
+// ── Theme toggle ──
+let isDark = localStorage.getItem('nexus-theme') !== 'light';
+if(!isDark){
+  document.body.classList.add('light');
+  document.getElementById('themePill')?.classList.add('on');
+}
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.classList.toggle('light',!isDark);
+  document.getElementById('themePill').classList.toggle('on',!isDark);
+  document.getElementById('themeLabel').textContent=isDark?'Currently dark':'Currently light';
+  document.querySelector('.pp-item-icon[style*="background:rgba(124,107,255,.1)"]').textContent=isDark?'🌙':'☀️';
+  showToast(isDark?'Dark mode on':'Light mode on','var(--accent)');
+  localStorage.setItem('nexus-theme', isDark ? 'dark' : 'light');
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg,color='var(--accent)'){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  document.getElementById('toastDot').style.background=color;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── File type icons & colors ──
+const fileConfig={
+  pdf:{icon:'📄',color:'rgba(255,107,107,.15)',accent:'#ff6b6b'},
+  pptx:{icon:'📊',color:'rgba(245,166,35,.15)',accent:'#f5a623'},
+  docx:{icon:'📝',color:'rgba(124,107,255,.15)',accent:'var(--accent)'},
+  md:{icon:'#️⃣',color:'rgba(0,212,170,.12)',accent:'var(--accent2)'},
+  png:{icon:'🖼️',color:'rgba(0,212,170,.12)',accent:'var(--accent2)'},
+  jpg:{icon:'🖼️',color:'rgba(0,212,170,.12)',accent:'var(--accent2)'},
+  jpeg:{icon:'🖼️',color:'rgba(0,212,170,.12)',accent:'var(--accent2)'},
+  mp3:{icon:'🎵',color:'rgba(124,107,255,.15)',accent:'var(--accent)'},
+  mp4:{icon:'🎬',color:'rgba(255,107,107,.12)',accent:'#ff6b6b'},
+  txt:{icon:'📃',color:'rgba(255,255,255,.06)',accent:'var(--muted)'},
+};
+function getExt(name){return name.split('.').pop().toLowerCase();}
+function getConfig(name){return fileConfig[getExt(name)]||{icon:'📎',color:'rgba(255,255,255,.06)',accent:'var(--muted)'};}
+function fmtSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+
+// ── Upload ──
+let uploadedFiles=[];
+let queryCount=0,insightCount=0;
+
+// ── Load existing files from backend on page load ──
+async function loadExistingFiles(){
+  try{
+    const res=await fetch(`${BACKEND_URL}/files`);
+    const data=await res.json();
+    data.files.forEach(f=>{
+      const fakeFile={name:f.filename, size:f.size};
+      uploadedFiles.push(fakeFile);
+      addFileToSidebar(fakeFile);
+    });
+    updateContext();
+    document.getElementById('statFiles').textContent=uploadedFiles.length;
+  }catch(err){
+    console.log('Could not load files from backend');
+  }
+}
+
+loadExistingFiles();
+
+function triggerUpload(){document.getElementById('fileInput').click();}
+
+function handleFiles(files){
+  if(!files.length)return;
+  const progress=document.getElementById('uploadProgress');
+  progress.classList.add('show');
+  let pct=0;
+  const fill=document.getElementById('upFill');
+  const label=document.getElementById('uploadLabel');
+  const pctEl=document.getElementById('uploadPct');
+
+  Array.from(files).forEach((f,i)=>{
+    setTimeout(async()=>{
+      label.textContent='Uploading '+f.name+'...';
+      const formData=new FormData();
+      formData.append('file',f);
+      try{
+        const res=await fetch(`${BACKEND_URL}/upload`,{method:'POST',body:formData});
+        const data=await res.json();
+        if(data.error){showToast(data.error,'var(--accent3)');return;}
+        uploadedFiles.push(f);
+        addFileToSidebar(f);
+        updateContext();
+        document.getElementById('statFiles').textContent=uploadedFiles.length;
+        showToast(f.name+' uploaded to NEXUS','var(--accent2)');
+      }catch(err){
+        showToast('Upload failed — is Flask running?','var(--accent3)');
+      }finally{
+        pct=100;fill.style.width='100%';pctEl.textContent='100%';
+        setTimeout(()=>{progress.classList.remove('show');fill.style.width='0%';},600);
+      }
+    },i*300);
+  });
+}
+
+function addFileToSidebar(file){
+  const empty=document.getElementById('emptyState');
+  if(empty)empty.remove();
+  const cfg=getConfig(file.name);
+  const id='f_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+  const item=document.createElement('div');
+  item.className='resource-item';
+  item.id=id;
+  item.innerHTML=`
+    <div class="file-icon" style="background:${cfg.color}">${cfg.icon}</div>
+    <div class="file-meta">
+      <div class="file-name">${file.name}</div>
+      <div class="file-size">${fmtSize(file.size)} · ${getExt(file.name).toUpperCase()}</div>
+    </div>
+    <button class="file-remove" onclick="removeFile('${id}',event)" title="Remove">✕</button>
+  `;
+  item.onclick=()=>item.classList.toggle('active');
+  document.getElementById('resourceList').appendChild(item);
+  document.getElementById('fileCount').textContent=uploadedFiles.length;
+}
+
+function removeFile(id,e){
+  e.stopPropagation();
+  const el=document.getElementById(id);
+  if(el){el.style.opacity='0';el.style.transform='translateX(-12px)';el.style.transition='all .3s';setTimeout(()=>{el.remove();updateEmptyState();},300);}
+  uploadedFiles=uploadedFiles.filter((_,i)=>i!==uploadedFiles.length-1);
+  document.getElementById('fileCount').textContent=uploadedFiles.length;
+  document.getElementById('statFiles').textContent=uploadedFiles.length;
+  updateContext();
+}
+
+function updateEmptyState(){
+  const list=document.getElementById('resourceList');
+  if(!list.querySelector('.resource-item')){
+    const e=document.createElement('div');e.className='empty-state';e.id='emptyState';
+    e.innerHTML='<div class="empty-icon">📁</div><div class="empty-text">No resources yet.<br>Upload files to power your AI queries.</div>';
+    list.appendChild(e);
+  }
+}
+
+function updateContext(){
+  const chip=document.getElementById('ctxChip');
+  if(uploadedFiles.length===0){
+    chip.innerHTML='<div class="ctx-chip-dot" style="background:var(--muted2)"></div> No files loaded';
+  } else {
+    chip.innerHTML=`<div class="ctx-chip-dot" style="background:var(--accent2)"></div> ${uploadedFiles.length} file${uploadedFiles.length>1?'s':''} in context`;
+  }
+}
+
+// ── Drag & drop ──
+document.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('dragOverlay').classList.add('show');});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.getElementById('dragOverlay').classList.remove('show');});
+document.addEventListener('drop',e=>{
+  e.preventDefault();
+  document.getElementById('dragOverlay').classList.remove('show');
+  handleFiles(e.dataTransfer.files);
+});
+
+// ── Chat ──
+const aiResponses=[
+  "Based on your uploaded documents, here's what I found: the key topics covered include structured data retrieval, vector embeddings, and semantic search patterns. Your notes reference this on pages 3–7.",
+  "From your files, I've identified 4 action items: complete the literature review by Friday, finalize the architecture diagram, set up the Flask server, and test the RAG pipeline end-to-end.",
+  "Your uploaded calendar shows 3 major deadlines this month. I've cross-referenced them with your notes and built a priority schedule. The most urgent item is the project submission on the 28th.",
+  "I found 6 relevant passages across your documents that address this. The consensus suggests using cosine similarity for retrieval with a threshold of 0.75 for best results.",
+  "Summary complete. Your 24-page document condenses to: (1) Problem — information overload in knowledge work. (2) Solution — private RAG with vector search. (3) Outcome — 3x faster retrieval with zero hallucination on private data."
+];
+let aiIdx=0;
+
+async function sendMessage(){
+  const input=document.getElementById('chatInput');
+  const text=input.value.trim();
+  if(!text)return;
+
+  document.getElementById('welcomeState')?.remove();
+  addMessage(text,'user');
+  input.value='';
+  input.style.height='auto';
+  queryCount++;
+  document.getElementById('statQueries').textContent=queryCount;
+
+  // Typing indicator
+  const typing=document.createElement('div');
+  typing.className='msg ai';
+  typing.id='typing';
+  typing.innerHTML=`<div class="msg-avatar">N</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  document.getElementById('messages').appendChild(typing);
+  scrollToBottom();
+
+  // ── Call backend ──
+  try{
+    const res=await fetch(`${BACKEND_URL}/query`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:text})
+    });
+    const data=await res.json();
+    typing.remove();
+    const reply=data.answer||data.error||'No response from NEXUS.';
+    insightCount++;
+    document.getElementById('statTokens').textContent=insightCount;
+    addMessage(reply,'ai');
+  }catch(err){
+    typing.remove();
+    addMessage('Backend not reachable — make sure Flask is running on port 5000.','ai');
+  }
+}
+
+function addMessage(text,role){
+  const msgs=document.getElementById('messages');
+  const div=document.createElement('div');
+  div.className=`msg ${role}`;
+  const sourceHtml=role==='ai'&&uploadedFiles.length>0?`<div class="msg-source"><div class="msg-source-dot"></div>Sourced from your ${uploadedFiles.length} file${uploadedFiles.length>1?'s':''}</div>`:'';
+  div.innerHTML=`<div class="msg-avatar">${role==='user'?'RV':'N'}</div><div><div class="msg-bubble">${text}</div>${sourceHtml}</div>`;
+  msgs.appendChild(div);
+  scrollToBottom();
+}
+
+function scrollToBottom(){const m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}
+
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+function autoResize(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';}
+function useStarter(btn){document.getElementById('chatInput').value=btn.textContent;document.getElementById('chatInput').focus();sendMessage();}
+
+// ── Feature cards ──
+function activateFeature(card,type){
+  document.querySelectorAll('.qa-card').forEach(c=>c.classList.remove('active-card'));
+  card.classList.add('active-card');
+  const msgs={
+    schedule:'Smart Planner activated — upload a calendar or syllabus to generate your schedule.',
+    remind:'Smart Reminders activated — deadlines and events will be auto-extracted from your files.',
+    ai:'Deep Query mode active — multi-document cross-analysis enabled.',
+    summarize:'Instant Summary ready — select a file or ask me to summarize any document.'
+  };
+  document.getElementById('chatInput').value=msgs[type]||'';
+  document.getElementById('chatInput').focus();
+  showToast(card.querySelector('.qa-title').textContent+' activated','var(--accent)');
+}
+
+// ── Logout ──
+function handleLogout(){
+  showToast('Signing out...','var(--accent3)');
+  setTimeout(()=>window.location.href='signin.html',1200);
+}
+
+// ── Wellness nudge rotation ──
+const nudges=[
+  "You're all set. Stay hydrated and take a short break every 90 min!",
+  "Tip: Uploading a structured PDF gives the best retrieval accuracy.",
+  "Pro move: Ask NEXUS to find action items across all your files at once.",
+  "Remember to save important AI responses — copy them before closing.",
+];
+let nudgeIdx=0;
+setInterval(()=>{
+  nudgeIdx=(nudgeIdx+1)%nudges.length;
+  document.getElementById('wellnessMsg').style.opacity='0';
+  setTimeout(()=>{
+    document.getElementById('wellnessMsg').textContent=nudges[nudgeIdx];
+    document.getElementById('wellnessMsg').style.transition='opacity .4s';
+    document.getElementById('wellnessMsg').style.opacity='1';
+  },300);
+},12000);
+
+
+  async function fetchUserProfile() {
+  // First check localStorage (set by OAuth redirect)
+  const storedName = localStorage.getItem('nexus-user-name');
+  const storedEmail = localStorage.getItem('nexus-user-email');
+  const storedPicture = localStorage.getItem('nexus-user-picture');
+
+  if(storedName) {
+    updateUI(storedName, storedEmail, storedPicture);
+    return; // Don't call backend if we already have the data
+  }
+
+  // Otherwise try backend
+  try {
+    const response = await fetch('http://127.0.0.1:5000/me', {credentials: 'include'});
+    if (response.ok) {
+      const user = await response.json();
+      localStorage.setItem('nexus-user-name', user.name);
+      localStorage.setItem('nexus-user-email', user.email);
+      localStorage.setItem('nexus-user-picture', user.picture || '');
+      updateUI(user.name, user.email, user.picture);
+    }
+    // ← NO redirect here — just stay on dashboard
+  } catch (err) {
+    console.error("Backend not reachable");
+  }
+}
+
+function updateUI(name, email, picture) {
+  const nameBtn = document.getElementById('user-name');
+  if(nameBtn) nameBtn.textContent = name;
+  const namePopup = document.getElementById('user-name-popup');
+  if(namePopup) namePopup.textContent = name;
+  const emailDiv = document.getElementById('user-email');
+  if(emailDiv) emailDiv.textContent = email;
+  const avatar = document.querySelector('.avatar');
+  if(avatar && picture) {
+    avatar.innerHTML = `<img src="${picture}" style="width:100%;height:100%;border-radius:50%;">`;
+  }
+}
+
+window.onload = fetchUserProfile;
+</script>
+
+</body>
+</html>

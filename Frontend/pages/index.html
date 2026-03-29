@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEXUS — Personal Productivity Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #050508;
+    --surface: #0d0d14;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7c6bff;
+    --accent2: #00d4aa;
+    --accent3: #ff6b6b;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.45);
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── Custom Cursor ── */
+  #cursor {
+    position: fixed; top: 0; left: 0;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s ease, width 0.3s ease, height 0.3s ease, background 0.3s ease;
+    mix-blend-mode: screen;
+  }
+  #cursor-ring {
+    position: fixed; top: 0; left: 0;
+    width: 36px; height: 36px;
+    border: 1.5px solid rgba(124,107,255,0.6);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.18s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+  }
+  body:has(a:hover) #cursor, body:has(button:hover) #cursor { width: 18px; height: 18px; background: var(--accent2); }
+  body:has(a:hover) #cursor-ring, body:has(button:hover) #cursor-ring { width: 54px; height: 54px; border-color: var(--accent2); }
+
+  /* ── Noise Overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.028;
+    pointer-events: none;
+    z-index: 9997;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 48px;
+    backdrop-filter: blur(12px);
+    background: rgba(5,5,8,0.6);
+    border-bottom: 1px solid var(--border);
+    transition: padding 0.4s ease;
+  }
+  nav.scrolled { padding: 14px 48px; }
+  .nav-logo {
+    font-family: var(--font-head);
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a {
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.25s;
+    cursor: none;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    font-family: var(--font-head); font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 10px 24px; border-radius: 100px;
+    border: 1.5px solid rgba(124,107,255,0.5);
+    color: var(--text); background: transparent; cursor: none;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .nav-cta:hover { background: rgba(124,107,255,0.15); border-color: var(--accent); }
+
+  /* ── HERO ── */
+  #hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    padding: 120px 24px 80px;
+  }
+
+  /* Grid background */
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(124,107,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,107,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 100%);
+  }
+
+  /* Glowing orbs */
+  .orb {
+    position: absolute; border-radius: 50%; filter: blur(80px);
+    pointer-events: none; animation: orbDrift 12s ease-in-out infinite;
+  }
+  .orb-1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(124,107,255,0.18), transparent 70%); top: -100px; left: -100px; animation-duration: 14s; }
+  .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(0,212,170,0.14), transparent 70%); bottom: -50px; right: -50px; animation-duration: 10s; animation-delay: -5s; }
+  .orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,107,107,0.1), transparent 70%); top: 40%; left: 60%; animation-duration: 16s; animation-delay: -3s; }
+  @keyframes orbDrift {
+    0%, 100% { transform: translate(0,0); }
+    33% { transform: translate(30px,-20px); }
+    66% { transform: translate(-20px,30px); }
+  }
+
+  /* Interactive title canvas */
+  .hero-eyebrow {
+    font-family: var(--font-body); font-size: 0.75rem; font-weight: 500;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 28px;
+    opacity: 0; transform: translateY(20px);
+    animation: fadeUp 0.8s ease 0.3s forwards;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hero-eyebrow::before, .hero-eyebrow::after {
+    content: ''; display: block; width: 32px; height: 1px; background: var(--accent2); opacity: 0.5;
+  }
+
+  .hero-title-wrap {
+    position: relative; text-align: center;
+    opacity: 0; transform: translateY(30px);
+    animation: fadeUp 0.9s ease 0.5s forwards;
+  }
+  .hero-title {
+    font-family: var(--font-head);
+    font-size: clamp(3.5rem, 10vw, 9rem);
+    font-weight: 800;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    position: relative; display: inline-block;
+  }
+  .hero-title .word {
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+  .hero-title .char {
+    display: inline-block;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), color 0.2s;
+  }
+  .hero-title .char:hover {
+    transform: translateY(-8px) scale(1.1);
+    filter: drop-shadow(0 0 20px var(--accent));
+  }
+  .hero-title .accent-word .char {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .hero-sub {
+    font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+    color: var(--muted);
+    max-width: 560px; text-align: center; line-height: 1.7;
+    margin: 32px auto 0;
+    opacity: 0; transform: translateY(20px);
+    animation: fadeUp 0.8s ease 0.8s forwards;
+    font-weight: 300;
+  }
+
+  .hero-actions {
+    display: flex; gap: 16px; align-items: center; margin-top: 48px;
+    opacity: 0; transform: translateY(20px);
+    animation: fadeUp 0.8s ease 1s forwards;
+  }
+
+  .btn-primary {
+    position: relative; overflow: hidden;
+    font-family: var(--font-head); font-size: 0.9rem; font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 16px 40px; border-radius: 100px;
+    border: none; cursor: none;
+    background: linear-gradient(135deg, var(--accent), #5a4fe0);
+    color: #fff;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
+    box-shadow: 0 0 0 rgba(124,107,255,0);
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .btn-primary:hover { transform: scale(1.06) translateY(-2px); box-shadow: 0 20px 60px rgba(124,107,255,0.35); }
+  .btn-primary:hover::before { opacity: 1; }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .btn-ghost {
+    font-family: var(--font-head); font-size: 0.85rem; font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 16px 32px; border-radius: 100px;
+    border: 1px solid var(--border); cursor: none;
+    background: transparent; color: var(--muted);
+    transition: color 0.3s, border-color 0.3s, background 0.3s;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+
+  .hero-scroll {
+    position: absolute; bottom: 40px; left: 48px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; animation: fadeUp 0.8s ease 1.4s forwards;
+    cursor: none;
+  }
+  .hero-scroll span {
+    font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted);
+    writing-mode: vertical-rl; transform: rotate(180deg);
+  }
+  .scroll-line {
+    width: 1px; height: 50px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%, 100% { transform: scaleY(1); opacity: 0.6; }
+    50% { transform: scaleY(0.6); opacity: 1; }
+  }
+
+  /* ── STATS STRIP ── */
+  .stats-strip {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 0;
+    background: rgba(13,13,20,0.8);
+    overflow: hidden; position: relative;
+  }
+  .stats-track {
+    display: flex; gap: 80px; align-items: center;
+    animation: marquee 20s linear infinite;
+    white-space: nowrap; width: max-content;
+  }
+  .stat-item { display: flex; align-items: center; gap: 14px; }
+  .stat-num {
+    font-family: var(--font-head); font-size: 1.6rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stat-label { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.06em; }
+  .stat-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ── FEATURES SECTION (Blur Tabs) ── */
+  #features {
+    padding: 140px 0 120px;
+    position: relative; overflow: hidden;
+  }
+  .section-label {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 20px;
+  }
+  .section-label::before, .section-label::after {
+    content: ''; display: block; width: 40px; height: 1px; background: var(--accent); opacity: 0.4;
+  }
+  .section-title {
+    font-family: var(--font-head); font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800; text-align: center; letter-spacing: -0.02em;
+    margin-bottom: 80px; line-height: 1.1;
+  }
+  .section-title em { font-style: normal; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .features-tabs {
+    display: flex; justify-content: center; gap: 0;
+    padding: 0 48px; max-width: 1100px; margin: 0 auto 60px;
+    position: relative;
+  }
+  .tab-btn {
+    font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+    padding: 16px 48px; cursor: none; border: none; background: transparent;
+    color: var(--muted); letter-spacing: 0.02em;
+    transition: color 0.4s, opacity 0.4s;
+    position: relative;
+  }
+  .tab-btn.active { color: var(--text); }
+  .tab-btn:not(.active) { filter: blur(0.5px); opacity: 0.5; }
+  .tab-indicator {
+    position: absolute; bottom: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: left 0.5s cubic-bezier(0.4,0,0.2,1), width 0.5s cubic-bezier(0.4,0,0.2,1);
+    border-radius: 2px;
+  }
+
+  .features-content { max-width: 1100px; margin: 0 auto; padding: 0 48px; position: relative; }
+  .feature-panel {
+    display: none; animation: panelIn 0.5s ease;
+  }
+  .feature-panel.active { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+  @keyframes panelIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .feature-info {}
+  .feature-tag {
+    display: inline-block;
+    font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 20px;
+    padding: 6px 14px; border-radius: 100px;
+    border: 1px solid rgba(0,212,170,0.3);
+    background: rgba(0,212,170,0.06);
+  }
+  .feature-title {
+    font-family: var(--font-head); font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+    font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -0.02em;
+  }
+  .feature-desc {
+    font-size: 1rem; color: var(--muted); line-height: 1.75; font-weight: 300;
+    margin-bottom: 32px;
+  }
+  .feature-points { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .feature-points li {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 0.88rem; color: rgba(240,238,255,0.7); line-height: 1.5;
+  }
+  .feature-points li::before {
+    content: ''; display: block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent2); flex-shrink: 0; margin-top: 7px;
+  }
+
+  .feature-visual {
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    position: relative; aspect-ratio: 4/3;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .feature-visual-inner {
+    width: 100%; height: 100%; padding: 32px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  /* Visual mockup for Study Planner */
+  .mock-bar {
+    height: 8px; border-radius: 100px;
+    background: rgba(255,255,255,0.06);
+  }
+  .mock-bar.filled { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .mock-bar.w-80 { width: 80%; }
+  .mock-bar.w-60 { width: 60%; }
+  .mock-bar.w-45 { width: 45%; }
+  .mock-bar.w-90 { width: 90%; }
+
+  .mock-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+  }
+  .mock-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .mock-text { flex: 1; }
+  .mock-text .line1 { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.15); margin-bottom: 6px; width: 60%; }
+  .mock-text .line2 { height: 5px; border-radius: 4px; background: rgba(255,255,255,0.07); width: 40%; }
+  .mock-badge {
+    font-size: 0.65rem; font-family: var(--font-head); letter-spacing: 0.08em;
+    padding: 4px 10px; border-radius: 100px; font-weight: 700;
+  }
+  .badge-green { background: rgba(0,212,170,0.15); color: var(--accent2); border: 1px solid rgba(0,212,170,0.3); }
+  .badge-purple { background: rgba(124,107,255,0.15); color: var(--accent); border: 1px solid rgba(124,107,255,0.3); }
+  .badge-red { background: rgba(255,107,107,0.15); color: var(--accent3); border: 1px solid rgba(255,107,107,0.3); }
+
+  .mock-calendar {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; color: var(--muted); font-family: var(--font-head);
+  }
+  .cal-day.has-event { background: rgba(124,107,255,0.2); color: var(--accent); }
+  .cal-day.today { background: var(--accent); color: white; }
+  .cal-day.important { background: rgba(0,212,170,0.2); color: var(--accent2); }
+
+  /* Health visual */
+  .health-circle-wrap {
+    display: flex; justify-content: center; align-items: center; padding: 20px 0;
+  }
+  .health-ring {
+    width: 140px; height: 140px; border-radius: 50%;
+    background: conic-gradient(var(--accent2) 0% 72%, rgba(255,255,255,0.06) 72% 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .health-ring::before {
+    content: ''; position: absolute; inset: 14px;
+    border-radius: 50%; background: var(--surface);
+  }
+  .health-ring-val {
+    position: relative; z-index: 1; text-align: center;
+    font-family: var(--font-head); font-size: 1.4rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent2), #fff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .health-row {
+    display: flex; gap: 12px; margin-top: 10px;
+  }
+  .health-card {
+    flex: 1; padding: 14px; border-radius: 12px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    text-align: center;
+  }
+  .health-card-icon { font-size: 1.3rem; margin-bottom: 6px; }
+  .health-card-val { font-family: var(--font-head); font-size: 1rem; font-weight: 700; color: var(--text); }
+  .health-card-lbl { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+  /* Custom button visual */
+  .custom-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .custom-chip {
+    padding: 16px; border-radius: 14px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 8px;
+    cursor: none; transition: background 0.3s, border-color 0.3s;
+  }
+  .custom-chip:hover { background: rgba(124,107,255,0.1); border-color: rgba(124,107,255,0.3); }
+  .custom-chip.selected { background: rgba(124,107,255,0.12); border-color: rgba(124,107,255,0.5); }
+  .chip-icon { font-size: 1.4rem; }
+  .chip-label { font-family: var(--font-head); font-size: 0.78rem; font-weight: 700; color: var(--text); }
+  .chip-sub { font-size: 0.65rem; color: var(--muted); line-height: 1.4; }
+  .chip-check {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); border: none; align-self: flex-end;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.5rem; color: white;
+  }
+
+  /* Glow behind visual */
+  .feature-visual::after {
+    content: ''; position: absolute;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,107,255,0.12), transparent 70%);
+    bottom: -60px; right: -60px; filter: blur(40px); pointer-events: none;
+  }
+
+  /* ── WHY NEXUS ── */
+  #why {
+    padding: 120px 48px;
+    max-width: 1200px; margin: 0 auto;
+  }
+  .why-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--border); border-radius: 24px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .why-card {
+    padding: 48px 40px;
+    background: var(--surface);
+    position: relative; overflow: hidden;
+    transition: background 0.4s;
+  }
+  .why-card:hover { background: rgba(124,107,255,0.05); }
+  .why-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124,107,255,0.4), transparent);
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .why-card:hover::before { opacity: 1; }
+  .why-num {
+    font-family: var(--font-head); font-size: 3.5rem; font-weight: 800;
+    color: rgba(124,107,255,0.1); line-height: 1; margin-bottom: 24px;
+    transition: color 0.4s;
+  }
+  .why-card:hover .why-num { color: rgba(124,107,255,0.25); }
+  .why-icon { font-size: 1.8rem; margin-bottom: 16px; }
+  .why-title {
+    font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 12px; letter-spacing: 0.01em;
+  }
+  .why-text { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
+
+  /* ── HOW IT WORKS ── */
+  #how {
+    padding: 120px 48px;
+    background: linear-gradient(to bottom, transparent, rgba(124,107,255,0.03), transparent);
+  }
+  .how-inner { max-width: 900px; margin: 0 auto; }
+  .how-steps {
+    display: flex; flex-direction: column; gap: 0;
+    position: relative; margin-top: 60px;
+  }
+  .how-steps::before {
+    content: ''; position: absolute; left: 24px; top: 0; bottom: 0;
+    width: 1px; background: linear-gradient(to bottom, transparent, var(--accent), transparent);
+  }
+  .how-step {
+    display: flex; gap: 40px; padding: 40px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .how-step.visible { opacity: 1; transform: translateX(0); }
+  .how-step:last-child { border-bottom: none; }
+  .step-num-wrap {
+    flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%;
+    background: var(--surface); border: 1px solid rgba(124,107,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-head); font-size: 0.85rem; font-weight: 800;
+    color: var(--accent); position: relative; z-index: 1;
+  }
+  .step-content { flex: 1; padding-top: 10px; }
+  .step-title {
+    font-family: var(--font-head); font-size: 1.2rem; font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .step-text { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+
+  /* ── CTA ── */
+  #cta {
+    padding: 140px 48px;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .cta-glow {
+    position: absolute; width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,107,255,0.12), transparent 70%);
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    filter: blur(60px); pointer-events: none;
+  }
+  .cta-title {
+    font-family: var(--font-head); font-size: clamp(2.5rem, 5vw, 5rem);
+    font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
+    margin-bottom: 24px; position: relative;
+  }
+  .cta-sub {
+    font-size: 1.05rem; color: var(--muted); max-width: 480px;
+    margin: 0 auto 48px; line-height: 1.7; position: relative;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-copy { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; }
+  .footer-logo {
+    font-family: var(--font-head); font-size: 1rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .footer-links { display: flex; gap: 28px; }
+  .footer-links a { font-size: 0.75rem; color: var(--muted); text-decoration: none; cursor: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--text); }
+
+  /* ── Utilities ── */
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .observe-fade {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .observe-fade.visible { opacity: 1; transform: translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(124,107,255,0.3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">NEXUS</div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#why">Why NEXUS</a></li>
+    <li><a href="#how">How It Works</a></li>
+  </ul>
+  <button class="nav-cta" onclick="location.href='#cta'">Get Started</button>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="hero-eyebrow">AI-Powered Productivity</div>
+
+  <div class="hero-title-wrap">
+    <h1 class="hero-title" id="heroTitle">
+      <span class="word">YOUR&nbsp;</span><span class="word accent-word">MIND,</span><br>
+      <span class="word">AMPLIFIED</span>
+    </h1>
+  </div>
+
+  <p class="hero-sub">
+    Query your personal documents, notes, and meetings using plain language.
+    NEXUS turns information overload into instant clarity — privately, accurately, intelligently.
+  </p>
+
+  <div class="hero-actions">
+    <button class="btn-primary"><span>Get Started →</span></button>
+    <button class="btn-ghost">See How It Works</button>
+  </div>
+
+  <div class="hero-scroll">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- STATS STRIP -->
+<div class="stats-strip">
+  <div class="stats-track" id="statsTrack">
+    <div class="stat-item"><span class="stat-num">RAG</span><span class="stat-label">Retrieval Augmented Generation</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">0%</span><span class="stat-label">Data leaves your device</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">3x</span><span class="stat-label">Faster Information Retrieval</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">PDF</span><span class="stat-label">Notes, Transcripts & More</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">NLP</span><span class="stat-label">Natural Language Queries</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">RAG</span><span class="stat-label">Retrieval Augmented Generation</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">0%</span><span class="stat-label">Data leaves your device</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">3x</span><span class="stat-label">Faster Information Retrieval</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">PDF</span><span class="stat-label">Notes, Transcripts & More</span></div>
+    <div class="stat-dot"></div>
+    <div class="stat-item"><span class="stat-num">NLP</span><span class="stat-label">Natural Language Queries</span></div>
+    <div class="stat-dot"></div>
+  </div>
+</div>
+
+<!-- FEATURES (blur tabs like Flow) -->
+<section id="features">
+<div class="section-label">Core Features</div>
+<h2 class="section-title">Four tools.<br><em>Infinite focus.</em></h2>
+
+<div class="features-tabs" id="featureTabs">
+    <button class="tab-btn active" data-tab="0">Smart Planner</button>
+    <button class="tab-btn" data-tab="1">Smart Reminders</button>
+    <button class="tab-btn" data-tab="2">Deep Query</button>
+    <button class="tab-btn" data-tab="3">Instant Summary</button>
+    <div class="tab-indicator" id="tabIndicator"></div>
+</div>
+
+  <div class="features-content">
+
+<!-- Tab 0: Smart Planner -->
+<div class="feature-panel active" id="panel-0">
+  <div class="feature-info">
+    <div class="feature-tag">Smart Scheduling</div>
+    <h3 class="feature-title">Your semester,<br>planned in seconds.</h3>
+    <p class="feature-desc">Upload your academic calendar and let NEXUS build a complete semester schedule — deadlines, revision slots, and buffer days — all personalised to how you actually study.</p>
+    <ul class="feature-points">
+      <li>Upload your syllabus or calendar PDF and get a full study plan instantly</li>
+      <li>AI adapts the schedule dynamically when exams or deadlines shift</li>
+      <li>Color-coded priorities help you focus on what matters most today</li>
+      <li>Works equally well for professionals managing work sprints</li>
+    </ul>
+  </div>
+  <div class="feature-visual">
+    <div class="feature-visual-inner">
+      <div class="mock-calendar">
+        <div class="cal-day">M</div><div class="cal-day">T</div><div class="cal-day">W</div>
+        <div class="cal-day">T</div><div class="cal-day">F</div><div class="cal-day">S</div><div class="cal-day">S</div>
+        <div class="cal-day has-event">3</div><div class="cal-day">4</div><div class="cal-day has-event">5</div>
+        <div class="cal-day">6</div><div class="cal-day important">7</div><div class="cal-day">8</div><div class="cal-day">9</div>
+        <div class="cal-day">10</div><div class="cal-day today">11</div><div class="cal-day has-event">12</div>
+        <div class="cal-day important">13</div><div class="cal-day has-event">14</div><div class="cal-day">15</div><div class="cal-day">16</div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent)"></div>
+        <div class="mock-text"><div class="line1"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-purple">Today</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent2)"></div>
+        <div class="mock-text"><div class="line1" style="width:75%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-green">Done</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent3)"></div>
+        <div class="mock-text"><div class="line1" style="width:50%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-red">Due Fri</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 1: Smart Reminders -->
+<div class="feature-panel" id="panel-1">
+  <div class="feature-info">
+    <div class="feature-tag" style="color:var(--accent4);border-color:rgba(245,166,35,0.3);background:rgba(245,166,35,0.06);">Auto-Detect</div>
+    <h3 class="feature-title">Never miss<br>a deadline again.</h3>
+    <p class="feature-desc">NEXUS scans your uploaded documents and automatically extracts deadlines, events, and reminders — then sends browser notifications even when you're on another tab.</p>
+    <ul class="feature-points">
+      <li>Auto-extracts dates and deadlines from any uploaded document</li>
+      <li>Browser push notifications work even on YouTube or other tabs</li>
+      <li>Snooze or dismiss reminders with one click</li>
+      <li>Manual reminder creation with priority levels</li>
+    </ul>
+  </div>
+  <div class="feature-visual">
+    <div class="feature-visual-inner">
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent3)"></div>
+        <div class="mock-text"><div class="line1" style="width:70%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-red">Overdue</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent4,#f5a623)"></div>
+        <div class="mock-text"><div class="line1" style="width:55%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-purple">Today</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent2)"></div>
+        <div class="mock-text"><div class="line1" style="width:80%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-green">Upcoming</span>
+      </div>
+      <div style="margin-top:14px;padding:12px 16px;border-radius:12px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1rem;">🔔</span>
+        <span style="font-size:0.78rem;color:rgba(240,238,255,0.8);">3 reminders extracted from your syllabus</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 2: Deep Query -->
+<div class="feature-panel" id="panel-2">
+  <div class="feature-info">
+    <div class="feature-tag" style="color:var(--accent2);border-color:rgba(0,212,170,0.3);background:rgba(0,212,170,0.06);">RAG Powered</div>
+    <h3 class="feature-title">Ask anything.<br>Across all your files.</h3>
+    <p class="feature-desc">Deep Query lets you run intelligent searches across multiple documents simultaneously — finding connections, contradictions, and insights that span your entire knowledge base.</p>
+    <ul class="feature-points">
+      <li>Cross-file reasoning across all your uploaded documents</li>
+      <li>Four query modes: Cross-File, Single File, Fact Check, Compare</li>
+      <li>Source citations show exactly which file answered your question</li>
+      <li>Confidence scores for every retrieved answer</li>
+    </ul>
+  </div>
+  <div class="feature-visual">
+    <div class="feature-visual-inner">
+      <div style="font-size:0.65rem;color:var(--accent2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Sources Retrieved</div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent2)"></div>
+        <div class="mock-text"><div class="line1" style="width:65%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-green">94%</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent)"></div>
+        <div class="mock-text"><div class="line1" style="width:80%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-purple">87%</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent3)"></div>
+        <div class="mock-text"><div class="line1" style="width:50%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-green">76%</span>
+      </div>
+      <div style="margin-top:14px;padding:12px 16px;border-radius:12px;background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1rem;">⚡</span>
+        <span style="font-size:0.78rem;color:rgba(240,238,255,0.8);">Answer sourced from 3 files in 0.4s</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Instant Summary -->
+<div class="feature-panel" id="panel-3">
+  <div class="feature-info">
+    <div class="feature-tag" style="color:var(--accent3);border-color:rgba(255,107,107,0.3);background:rgba(255,107,107,0.06);">1-Click</div>
+    <h3 class="feature-title">24 pages.<br>8 key points.</h3>
+    <p class="feature-desc">Compress lengthy documents into sharp, structured summaries. Choose your compression level — from a single tweet to a full executive brief — and get the essence instantly.</p>
+    <ul class="feature-points">
+      <li>5 compression levels from Tweet to Executive Brief</li>
+      <li>Color-coded highlights: deadlines, key facts, action items</li>
+      <li>Multi-file summary across your entire knowledge base</li>
+      <li>Export summaries as PDF or copy to clipboard</li>
+    </ul>
+  </div>
+  <div class="feature-visual">
+    <div class="feature-visual-inner">
+      <div style="font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Compression Level</div>
+      <div class="mock-bar" style="height:6px;background:rgba(255,255,255,0.06);border-radius:100px;margin-bottom:16px;">
+        <div style="height:6px;border-radius:100px;background:linear-gradient(90deg,var(--accent3),var(--accent));width:65%;"></div>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent3)"></div>
+        <div class="mock-text"><div class="line1" style="width:75%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-red">Deadline</span>
+      </div>
+      <div class="mock-row">
+        <div class="mock-dot" style="background:var(--accent2)"></div>
+        <div class="mock-text"><div class="line1" style="width:60%"></div><div class="line2"></div></div>
+        <span class="mock-badge badge-green">Key Fact</span>
+      </div>
+      <div style="margin-top:14px;padding:12px 16px;border-radius:12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1rem;">✨</span>
+        <span style="font-size:0.78rem;color:rgba(240,238,255,0.8);">24 pages → 8 key points · 94% compressed</span>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- WHY NEXUS -->
+<section id="why">
+  <div class="section-label observe-fade">Why NEXUS</div>
+  <h2 class="section-title observe-fade">Not another chatbot.<br><em>Your private brain.</em></h2>
+
+  <div class="why-grid observe-fade">
+    <div class="why-card">
+      <div class="why-num">01</div>
+      <div class="why-icon">🔒</div>
+      <h3 class="why-title">Private by Design</h3>
+      <p class="why-text">Your documents never leave your environment. Vector embeddings are stored locally — no third-party sees your data, ever.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-num">02</div>
+      <div class="why-icon">⚡</div>
+      <h3 class="why-title">Instant Answers</h3>
+      <p class="why-text">RAG-powered retrieval means answers are grounded in your actual documents — not hallucinated. Fast, accurate, sourced.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-num">03</div>
+      <div class="why-icon">🧠</div>
+      <h3 class="why-title">Understands Context</h3>
+      <p class="why-text">Ask in plain English. NEXUS understands what you mean — not just what you typed — and surfaces the right information in seconds.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-num">04</div>
+      <div class="why-icon">📄</div>
+      <h3 class="why-title">Any Document Format</h3>
+      <p class="why-text">PDFs, meeting transcripts, handwritten notes, markdown files — if you can upload it, NEXUS can understand and query it.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-num">05</div>
+      <div class="why-icon">🎯</div>
+      <h3 class="why-title">Built for Focus</h3>
+      <p class="why-text">Every feature reduces friction. Smart scheduling, quick buttons, and wellness nudges are designed to keep you in the zone longer.</p>
+    </div>
+    <div class="why-card">
+      <div class="why-num">06</div>
+      <div class="why-icon">⚙️</div>
+      <h3 class="why-title">Scalable Architecture</h3>
+      <p class="why-text">Built on Flask with vector database storage — handles growing document libraries without slowing down.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-label observe-fade">Process</div>
+  <h2 class="section-title observe-fade">From upload<br>to <em>insight</em> in four steps.</h2>
+  <div class="how-inner">
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-num-wrap">01</div>
+        <div class="step-content">
+          <h3 class="step-title">Upload your documents</h3>
+          <p class="step-text">Drag in PDFs, text files, meeting transcripts, or notes. NEXUS accepts any unstructured data you throw at it.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num-wrap">02</div>
+        <div class="step-content">
+          <h3 class="step-title">Automatic vectorization</h3>
+          <p class="step-text">Documents are chunked and converted into vector embeddings, then stored in your private vector database — ready for semantic search.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num-wrap">03</div>
+        <div class="step-content">
+          <h3 class="step-title">Ask in plain language</h3>
+          <p class="step-text">Type any question — "What did we decide in last Tuesday's meeting?" or "Summarize Chapter 4 of my notes." NEXUS retrieves the most relevant context.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num-wrap">04</div>
+        <div class="step-content">
+          <h3 class="step-title">Get accurate, grounded answers</h3>
+          <p class="step-text">Responses are generated with RAG — anchored to your actual documents, not generic knowledge. Zero hallucinations about your private data.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="cta-glow"></div>
+  <h2 class="cta-title observe-fade">Ready to stop<br>drowning in information?</h2>
+  <p class="cta-sub observe-fade">Join the waitlist. Be the first to experience a productivity assistant that actually knows your work.</p>
+  <div style="position:relative;" class="observe-fade">
+    <button class="btn-primary" style="font-size:1rem;padding:18px 52px;"><span>Get Started Free →</span></button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">NEXUS</span>
+  <span class="footer-copy">© 2026 NEXUS Productivity Assistant. Built with Flask + RAG.</span>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Contact</a>
+  </div>
+</footer>
+
+<script>
+// ── Cursor tracking ──
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+});
+
+function animateRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  cursorRing.style.left = rx + 'px';
+  cursorRing.style.top = ry + 'px';
+  requestAnimationFrame(animateRing);
+}
+animateRing();
+
+// ── Nav scroll ──
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 60);
+});
+
+// ── Hero char split ──
+const heroTitle = document.getElementById('heroTitle');
+heroTitle.querySelectorAll('.word').forEach(word => {
+  const text = word.textContent;
+  word.innerHTML = '';
+  [...text].forEach(ch => {
+    const s = document.createElement('span');
+    s.className = 'char';
+    s.textContent = ch === ' ' ? '\u00a0' : ch;
+    word.appendChild(s);
+  });
+});
+
+// ── Tabs (blur effect like Flow) ──
+const tabBtns = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.feature-panel');
+const tabIndicator = document.getElementById('tabIndicator');
+
+function updateIndicator(btn) {
+  const tabsRect = document.getElementById('featureTabs').getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  tabIndicator.style.left = (btnRect.left - tabsRect.left) + 'px';
+  tabIndicator.style.width = btnRect.width + 'px';
+}
+
+function activateTab(idx) {
+  tabBtns.forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  panels.forEach((p, i) => {
+    p.classList.toggle('active', i === idx);
+  });
+  updateIndicator(tabBtns[idx]);
+}
+
+tabBtns.forEach((btn, i) => {
+  btn.addEventListener('click', () => activateTab(i));
+});
+
+// Init indicator position
+window.addEventListener('load', () => updateIndicator(tabBtns[0]));
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.tab-btn.active');
+  if (active) updateIndicator(active);
+});
+
+// ── Intersection Observer for scroll animations ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.observe-fade, .how-step').forEach(el => observer.observe(el));
+
+// ── Stagger how-steps ──
+document.querySelectorAll('.how-step').forEach((step, i) => {
+  step.style.transitionDelay = (i * 0.12) + 's';
+});
+
+// ── Get Started → Sign In page ──
+document.querySelectorAll('[onclick]').forEach(btn => btn.removeAttribute('onclick'));
+document.querySelectorAll('.btn-primary, .nav-cta').forEach(btn => {
+  btn.addEventListener('click', () => {
+    window.location.href = 'signin.html';
+  });
+});
+document.querySelector('.btn-ghost').addEventListener('click', () => {
+  document.getElementById('how').scrollIntoView({ behavior: 'smooth' });
+});
+</script>
+</body>
+</html>
