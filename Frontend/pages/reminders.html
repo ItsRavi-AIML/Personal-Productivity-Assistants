@@ -656,66 +656,58 @@ if('Notification' in window&&Notification.permission==='granted'){notifOn=true;u
 
 
 async function extractFromFiles(files){
-  Array.from(files).forEach(async(f,i)=>{
-    setTimeout(async()=>{
-      t2('Uploading '+f.name+'...','var(--accent)');
-      const formData=new FormData();
-      formData.append('file',f);
-      try{
-        const uploadRes=await fetch(`${BACKEND_URL}/upload`,{method:'POST',body:formData});
-        const uploadData=await uploadRes.json();
-        if(uploadData.error){t2(uploadData.error,'var(--accent3)');return;}
-        t2('Extracting from '+f.name+'...','var(--accent4)');
+  const fileArray = Array.from(files);
+  for(let i=0; i<fileArray.length; i++){
+    const f = fileArray[i];
+    await new Promise(resolve => setTimeout(resolve, i*600));
+    t2('Uploading '+f.name+'...','var(--accent)');
+    const formData = new FormData();
+    formData.append('file', f);
+    try{
+      const uploadRes = await fetch(`${BACKEND_URL}/upload`,{method:'POST',body:formData});
+      const uploadData = await uploadRes.json();
+      if(uploadData.error){t2(uploadData.error,'var(--accent3)');continue;}
+      t2('Extracting from '+f.name+'...','var(--accent4)');
+      const queryRes = await fetch(`${BACKEND_URL}/query`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({question:'From the file '+f.name+', list deadlines in this exact format only - "TASK: [task name only] | DATE: [date] | TIME: [time or none]". One line per item. No intro. No extra text. Example: "TASK: Submit assignment | DATE: 28 March 2026 | TIME: 2:00 PM"'})
+      });
+      const queryData = await queryRes.json();
+      if(queryData.error){t2(queryData.error,'var(--accent3)');continue;}
+      const lines = queryData.answer.split('\n').filter(l=>l.includes('TASK:')).slice(0,3);
+      lines.forEach((line,idx)=>{
+        const taskMatch = line.match(/TASK:\s*([^|]+)/i);
+        const dateMatch = line.match(/DATE:\s*([^|]+)/i);
+        const timeMatch = line.match(/TIME:\s*([^|]+)/i);
+        if(!taskMatch) return;
+        const title = taskMatch[1].trim().slice(0,80);
+        const alreadyExists = reminders.some(r=>r.title.toLowerCase().includes(title.toLowerCase().slice(0,15)));
+        if(alreadyExists) return;
+        let date = off(idx+1);
+        if(dateMatch){
+          const dateStr = dateMatch[1].trim().replace(/(\d+)(st|nd|rd|th)/i,'$1');
+          const timeStr = timeMatch ? timeMatch[1].trim().replace(/none/i,'') : '';
+          const fullStr = timeStr ? dateStr+' '+timeStr : dateStr;
+          const parsed = new Date(fullStr);
+          if(!isNaN(parsed)) date = parsed.toISOString().slice(0,16);
+        }
+        addRem({title,desc:'',date,priority:'med',category:'Assignment',source:f.name}, true);
+      });
+      render();
+      t2('Done extracting from '+f.name+' ✓','var(--accent2)');
+    }catch(err){
+      t2('Upload failed — is Flask running?','var(--accent3)');
+    }
+  }
+}
 
-        const queryRes=await fetch(`${BACKEND_URL}/query`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({question:'From the file '+f.name+', list deadlines in this exact format only - "TASK: [task name only] | DATE: [date] | TIME: [time or none]". One line per item. No intro. No extra text. Example: "TASK: Submit assignment | DATE: 28 March 2026 | TIME: 2:00 PM"'})
-        });
-        const queryData=await queryRes.json();
-        if(queryData.error){t2(queryData.error,'var(--accent3)');return;}
-
-        const lines=queryData.answer.split('\n')
-          .filter(l=>l.includes('TASK:'))
-          .slice(0,3);
-
-        lines.forEach((line,idx)=>{
-          const taskMatch=line.match(/TASK:\s*([^|]+)/i);
-          const dateMatch=line.match(/DATE:\s*([^|]+)/i);
-          const timeMatch=line.match(/TIME:\s*([^|]+)/i);
-
-          if(!taskMatch) return;
-
-          const title=taskMatch[1].trim().slice(0,80);
-          const alreadyExists=reminders.some(r=>r.title.toLowerCase().includes(title.toLowerCase().slice(0,15)));
-          if(alreadyExists) return;
-
-          let date=off(idx+1);
-          if(dateMatch){
-            const dateStr=dateMatch[1].trim().replace(/(\d+)(st|nd|rd|th)/i,'$1');
-            const timeStr=timeMatch?timeMatch[1].trim().replace(/none/i,''):'';
-            const fullStr=timeStr?dateStr+' '+timeStr:dateStr;
-            const parsed=new Date(fullStr);
-            if(!isNaN(parsed)) date=parsed.toISOString().slice(0,16);
-          }
-
-          addRem({title,desc:'',date,priority:'med',category:'Assignment',source:f.name}, true);
-        });
-        render();
-        t2('Done extracting from '+f.name+' ✓','var(--accent2)');
-
-      }catch(err){
-        t2('Upload failed — is Flask running?','var(--accent3)');
-      }
-    },i*600);
-  });
-} 
 // Drag & drop
 let dragCount=0;
 document.addEventListener('dragenter',e=>{e.preventDefault();dragCount++;document.getElementById('dragOv').classList.add('show');});
 document.addEventListener('dragleave',e=>{dragCount--;if(dragCount===0)document.getElementById('dragOv').classList.remove('show');});
 document.addEventListener('dragover',e=>{e.preventDefault();});
-document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dragOv').classList.remove('show');extractFromFiles(e.dataTransfer.files);});
+document.addEventListener('drop',e=>{e.preventDefault();dragCount=0;document.getElementById('dragOv').classList.remove('show');extractFromFiles(e.dataTransfer.files);});
 
 // Check due every minute
 setInterval(()=>{

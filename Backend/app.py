@@ -229,6 +229,19 @@ def list_files():
             "size": os.path.getsize(filepath)
         })
     return jsonify({"files": files})
+# ── Delete file and its chunks ──
+@app.route("/files/<filename>", methods=["DELETE"])
+def delete_file(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            collection.delete(where={"filename": filename})
+            return jsonify({"message": "File deleted successfully"})
+        else:
+            return jsonify({"error": "File not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ── Summarize Route ──
 @app.route("/summarize", methods=["POST"])
@@ -286,6 +299,19 @@ def summarize():
             "chunks_used": len(results["documents"])
         })
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    @app.route("/files/<filename>", methods=["DELETE"])
+def delete_file(filename):
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            collection.delete(where={"filename": filename})
+            return jsonify({"message": "File deleted successfully"})
+        else:
+            return jsonify({"error": "File not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

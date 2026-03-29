@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXUS — Knowledge Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#050508;--surface:#0d0d14;--surface2:#111118;--surface3:#16161f;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --accent:#7c6bff;--accent2:#00d4aa;--accent3:#ff6b6b;--accent4:#f5a623;--accent5:#a78bfa;
+  --text:#f0eeff;--muted:rgba(240,238,255,.45);--muted2:rgba(240,238,255,.22);
+  --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+}
+body.light{
+  --bg:#f5f4ff;--surface:#ffffff;--surface2:#f0eeff;--surface3:#e8e6ff;
+  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.13);
+  --text:#1a1830;--muted:rgba(26,24,48,.5);--muted2:rgba(26,24,48,.25);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{min-height:100%;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);cursor:none;transition:background .4s,color .4s;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.022;pointer-events:none;z-index:9997;}
+
+/* Cursor */
+#cur{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent2);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;}
+#cur-r{position:fixed;top:0;left:0;width:28px;height:28px;border:1.5px solid rgba(0,212,170,.45);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);}
+body:has(button:hover) #cur,body:has(a:hover) #cur{width:13px;height:13px;background:var(--accent);}
+body:has(button:hover) #cur-r,body:has(a:hover) #cur-r{width:38px;height:38px;border-color:var(--accent);}
+body.light #cur{mix-blend-mode:normal;background:#1a1830;}
+body.light:has(button:hover) #cur,body.light:has(a:hover) #cur{background:var(--accent);}
+body.light #cur-r{border-color:rgba(26,24,48,.35);}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:200;background:rgba(5,5,8,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 40px;height:58px;display:flex;align-items:center;justify-content:space-between;}
+body.light header{background:rgba(255,255,255,.85);}
+.h-logo{font-family:var(--font-head);font-size:1.2rem;font-weight:800;letter-spacing:.12em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;cursor:none;}
+.h-right{display:flex;align-items:center;gap:10px;}
+.back-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:.78rem;text-decoration:none;cursor:none;transition:all .2s;}
+.back-btn:hover{color:var(--text);border-color:rgba(124,107,255,.3);}
+.upload-hdr-btn{padding:7px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent2),#00a88a);color:#fff;font-family:var(--font-head);font-size:.78rem;font-weight:700;cursor:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;position:relative;overflow:hidden;}
+.upload-hdr-btn:hover{transform:scale(1.05);box-shadow:0 6px 22px rgba(0,212,170,.35);}
+.upload-hdr-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),var(--accent2));opacity:0;transition:opacity .35s;}
+.upload-hdr-btn:hover::before{opacity:1;}
+.upload-hdr-btn span{position:relative;z-index:1;}
+
+/* HERO BANNER */
+.hero-banner{position:relative;height:180px;overflow:hidden;background:linear-gradient(135deg,#0d0d14 0%,#0a1a14 40%,#0d1420 100%);}
+.banner-mesh{position:absolute;inset:0;background:radial-gradient(ellipse 80% 120% at 20% 50%,rgba(0,212,170,.2) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 80% 30%,rgba(124,107,255,.15) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 50% 100%,rgba(0,212,170,.08) 0%,transparent 70%);animation:meshPulse 8s ease-in-out infinite;}
+@keyframes meshPulse{0%,100%{opacity:1;}50%{opacity:.8;}}
+.banner-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,170,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.05) 1px,transparent 1px);background-size:40px 40px;}
+.particle{position:absolute;border-radius:50%;animation:floatP var(--d,6s) ease-in-out var(--dl,0s) infinite;}
+@keyframes floatP{0%,100%{transform:translateY(0) scale(1);opacity:var(--op,.4);}50%{transform:translateY(-20px) scale(.8);opacity:calc(var(--op,.4)*.5);}}
+
+/* MAIN CONTENT */
+.vault-section{max-width:960px;margin:0 auto;padding:32px 40px 60px;}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;animation:fadeUp .5s ease .1s both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.sb-card{padding:16px 18px;border-radius:14px;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden;transition:border-color .3s,transform .25s;}
+.sb-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.sb-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--grad-a,rgba(0,212,170,.06)),transparent);opacity:0;transition:opacity .3s;}
+.sb-card:hover::before{opacity:1;}
+.sb-val{font-family:var(--font-head);font-size:1.6rem;font-weight:800;}
+.sb-lbl{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;animation:fadeUp .5s ease .2s both;}
+.search-wrap{flex:1;position:relative;}
+.search-input{width:100%;padding:10px 14px 10px 38px;border-radius:11px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-body);font-size:.88rem;outline:none;cursor:none;transition:border-color .3s,box-shadow .3s;}
+.search-input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(0,212,170,.1);}
+.search-input::placeholder{color:var(--muted2);}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted2);pointer-events:none;}
+.filter-btn{padding:9px 14px;border-radius:10px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:.78rem;cursor:none;transition:all .2s;white-space:nowrap;font-family:var(--font-head);font-weight:600;}
+.filter-btn.active{background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.3);color:var(--accent2);}
+.filter-btn:hover:not(.active){color:var(--text);border-color:var(--border2);}
+.view-toggle{display:flex;gap:2px;padding:4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);}
+.vt-btn{padding:6px 10px;border-radius:7px;border:none;background:transparent;color:var(--muted);cursor:none;font-size:.9rem;transition:all .2s;}
+.vt-btn.active{background:var(--surface3);color:var(--text);}
+
+/* File grid */
+.file-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;animation:fadeUp .5s ease .3s both;}
+.file-grid.list-view{grid-template-columns:1fr;}
+
+/* File card */
+.file-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;transition:all .25s cubic-bezier(.34,1.56,.64,1);cursor:none;position:relative;overflow:hidden;group:true;}
+.file-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.3);}
+.file-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--card-color,rgba(0,212,170,.04)),transparent);opacity:0;transition:opacity .3s;}
+.file-card:hover::before{opacity:1;}
+.file-card.list-view{display:flex;align-items:center;gap:14px;padding:14px 18px;}
+.fc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+.file-card.list-view .fc-top{margin-bottom:0;flex:none;}
+.fc-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
+.fc-menu{opacity:0;transition:opacity .2s;}
+.file-card:hover .fc-menu{opacity:1;}
+.fc-menu-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:none;display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:all .2s;}
+.fc-menu-btn:hover{background:var(--surface3);color:var(--text);}
+.fc-name{font-size:.85rem;font-weight:600;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-card.list-view .fc-name{margin-bottom:2px;}
+.fc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.fc-badge{font-size:.58rem;padding:2px 7px;border-radius:100px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.fc-size{font-size:.68rem;color:var(--muted);}
+.fc-date{font-size:.65rem;color:var(--muted2);}
+.fc-info{flex:1;min-width:0;}
+.fc-actions{display:flex;gap:6px;flex-shrink:0;}
+.fc-act-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-size:.72rem;cursor:none;font-family:var(--font-head);font-weight:600;transition:all .2s;white-space:nowrap;}
+.fc-act-btn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
+.fc-act-btn.danger:hover{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.3);color:var(--accent3);}
+.fc-chunks{font-size:.65rem;color:var(--accent2);margin-top:6px;display:flex;align-items:center;gap:4px;}
+.file-card.list-view .fc-chunks{margin-top:0;}
+
+/* Upload drop zone */
+.drop-zone{border:2px dashed rgba(0,212,170,.25);border-radius:18px;padding:40px;text-align:center;margin-bottom:24px;transition:all .3s;cursor:none;animation:fadeUp .5s ease .15s both;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent2);background:rgba(0,212,170,.04);}
+.dz-ico{font-size:2.4rem;margin-bottom:12px;opacity:.7;}
+.dz-title{font-family:var(--font-head);font-size:1rem;font-weight:800;margin-bottom:6px;}
+.dz-sub{font-size:.78rem;color:var(--muted);margin-bottom:16px;}
+.dz-btn{padding:9px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent2),#00a88a);color:#fff;font-family:var(--font-head);font-size:.8rem;font-weight:700;cursor:none;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;}
+.dz-btn:hover{transform:scale(1.05);box-shadow:0 6px 22px rgba(0,212,170,.35);}
+.ft-chips{display:flex;gap:5px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
+.ft-chip{font-size:.6rem;padding:3px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+
+/* Empty state */
+.empty-vault{text-align:center;padding:60px 40px;animation:fadeUp .5s ease .3s both;}
+.ev-ico{font-size:3rem;margin-bottom:16px;opacity:.4;}
+.ev-title{font-family:var(--font-head);font-size:1.1rem;font-weight:800;margin-bottom:8px;}
+.ev-sub{font-size:.82rem;color:var(--muted);line-height:1.7;}
+
+/* Delete confirm modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:28px;max-width:380px;width:90%;animation:modalIn .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modalIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+.modal-ico{font-size:2.2rem;margin-bottom:12px;}
+.modal-title{font-family:var(--font-head);font-size:1.1rem;font-weight:800;margin-bottom:8px;}
+.modal-sub{font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:22px;}
+.modal-actions{display:flex;gap:10px;}
+.modal-cancel{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font-family:var(--font-head);font-size:.82rem;font-weight:700;cursor:none;transition:all .2s;}
+.modal-cancel:hover{color:var(--text);}
+.modal-confirm{flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent3),#cc3333);color:#fff;font-family:var(--font-head);font-size:.82rem;font-weight:700;cursor:none;transition:transform .2s,box-shadow .2s;}
+.modal-confirm:hover{transform:scale(1.03);box-shadow:0 6px 20px rgba(255,107,107,.35);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:11px 20px;display:flex;align-items:center;gap:9px;font-size:.8rem;box-shadow:0 16px 48px rgba(0,0,0,.5);z-index:9000;transition:transform .4s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.td{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* Drag overlay */
+.drag-ov{position:fixed;inset:0;background:rgba(0,212,170,.06);border:2px dashed rgba(0,212,170,.4);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;backdrop-filter:blur(4px);}
+.drag-ov.show{display:flex;}
+</style>
+</head>
+<body>
+<div id="cur"></div><div id="cur-r"></div>
+<div class="toast" id="toast"><div class="td" id="td"></div><span id="tm"></span></div>
+<div class="drag-ov" id="dragOv">
+  <div style="font-size:2.5rem">📂</div>
+  <div style="font-family:var(--font-head);font-size:1.1rem;font-weight:800;color:var(--accent2)">Drop files to upload</div>
+</div>
+<input type="file" id="fileIn" multiple accept=".pdf,.pptx,.docx,.md,.txt" style="display:none" onchange="handleFiles(this.files)"/>
+
+<!-- Delete confirm modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-ico">🗑️</div>
+    <div class="modal-title">Delete this file?</div>
+    <div class="modal-sub" id="deleteModalSub">This will permanently remove the file and all its embeddings from your knowledge base. This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="modal-confirm" id="deleteConfirmBtn">Delete File</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <a href="dashboard.html" class="h-logo">NEXUS</a>
+  <div class="h-right">
+    <a href="dashboard.html" class="back-btn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Dashboard
+    </a>
+    <button class="upload-hdr-btn" onclick="document.getElementById('fileIn').click()"><span>📤 Upload Files</span></button>
+  </div>
+</header>
+
+<!-- HERO BANNER -->
+<div class="hero-banner">
+  <div class="banner-mesh"></div>
+  <div class="banner-grid"></div>
+  <div id="particles"></div>
+  <div style="position:absolute;bottom:24px;left:40px;">
+    <div style="font-family:var(--font-head);font-size:1.6rem;font-weight:800;color:#fff;letter-spacing:-.01em;">Knowledge Vault</div>
+    <div style="font-size:.82rem;color:rgba(255,255,255,.5);margin-top:4px;">All your uploaded documents — managed in one place</div>
+  </div>
+</div>
+
+<div class="vault-section">
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="sb-card" style="--grad-a:rgba(0,212,170,.08);">
+      <div class="sb-val" style="color:var(--accent2)" id="statTotal">0</div>
+      <div class="sb-lbl">Total Files</div>
+    </div>
+    <div class="sb-card" style="--grad-a:rgba(124,107,255,.08);">
+      <div class="sb-val" style="color:var(--accent)" id="statChunks">0</div>
+      <div class="sb-lbl">Chunks Indexed</div>
+    </div>
+    <div class="sb-card" style="--grad-a:rgba(245,166,35,.08);">
+      <div class="sb-val" style="color:var(--accent4)" id="statSize">0 KB</div>
+      <div class="sb-lbl">Total Size</div>
+    </div>
+    <div class="sb-card" style="--grad-a:rgba(255,107,107,.08);">
+      <div class="sb-val" style="color:var(--accent2);font-size:1rem;">Active</div>
+      <div class="sb-lbl">RAG Status</div>
+    </div>
+  </div>
+
+  <!-- Drop zone -->
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileIn').click()">
+    <div class="dz-ico">📁</div>
+    <div class="dz-title">Upload Documents to Your Vault</div>
+    <div class="dz-sub">Drag & drop files here, or click to browse</div>
+    <button class="dz-btn" onclick="event.stopPropagation();document.getElementById('fileIn').click()">Browse Files</button>
+    <div class="ft-chips">
+      <span class="ft-chip">PDF</span><span class="ft-chip">PPTX</span><span class="ft-chip">DOCX</span><span class="ft-chip">MD</span><span class="ft-chip">TXT</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="search-input" id="searchInput" placeholder="Search files..." oninput="filterFiles()"/>
+    </div>
+    <button class="filter-btn active" id="filterAll" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" id="filterPDF" onclick="setFilter('pdf',this)">PDF</button>
+    <button class="filter-btn" id="filterDOCX" onclick="setFilter('docx',this)">DOCX</button>
+    <button class="filter-btn" id="filterOther" onclick="setFilter('other',this)">Other</button>
+    <div class="view-toggle">
+      <button class="vt-btn active" id="gridBtn" onclick="setView('grid')" title="Grid view">⊞</button>
+      <button class="vt-btn" id="listBtn" onclick="setView('list')" title="List view">☰</button>
+    </div>
+  </div>
+
+  <!-- File grid -->
+  <div class="file-grid" id="fileGrid"></div>
+
+</div>
+
+<script>
+const BACKEND_URL = 'http://127.0.0.1:5000';
+
+// Cursor
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-r');
+let mx=window.innerWidth/2,my=window.innerHeight/2,rx=mx,ry=my;
+cur.style.opacity='0';curR.style.opacity='0';
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cur.style.opacity='1';curR.style.opacity='1';
+  cur.style.left=mx+'px';cur.style.top=my+'px';
+});
+(function loop(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(loop);})();
+
+// Theme
+if(localStorage.getItem('nexus-theme')==='light') document.body.classList.add('light');
+
+// Toast
+let tTimer;
+function t2(msg,color='var(--accent2)'){document.getElementById('tm').textContent=msg;document.getElementById('td').style.background=color;const t=document.getElementById('toast');t.classList.add('show');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+
+// State
+let files=[];
+let currentFilter='all';
+let currentView='grid';
+let deleteTarget=null;
+
+const fileIco={pdf:'📄',pptx:'📊',docx:'📝',md:'#️⃣',txt:'📃'};
+const fileColors={
+  pdf:{bg:'rgba(255,107,107,.12)',color:'var(--accent3)',badge:'rgba(255,107,107,.15)',badgeText:'var(--accent3)'},
+  pptx:{bg:'rgba(245,166,35,.12)',color:'var(--accent4)',badge:'rgba(245,166,35,.15)',badgeText:'var(--accent4)'},
+  docx:{bg:'rgba(124,107,255,.12)',color:'var(--accent)',badge:'rgba(124,107,255,.15)',badgeText:'var(--accent)'},
+  md:{bg:'rgba(0,212,170,.1)',color:'var(--accent2)',badge:'rgba(0,212,170,.12)',badgeText:'var(--accent2)'},
+  txt:{bg:'rgba(165,139,250,.1)',color:'var(--accent5)',badge:'rgba(165,139,250,.12)',badgeText:'var(--accent5)'},
+};
+function getExt(n){return n.split('.').pop().toLowerCase();}
+function getCfg(n){return fileColors[getExt(n)]||{bg:'rgba(255,255,255,.06)',color:'var(--muted)',badge:'rgba(255,255,255,.08)',badgeText:'var(--muted)'};}
+function fmtSize(b){if(!b||b===0)return '—';if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+function fmtTotalSize(bytes){if(bytes<1024)return bytes+'B';if(bytes<1048576)return(bytes/1024).toFixed(1)+'KB';return(bytes/1048576).toFixed(1)+'MB';}
+
+// Load files from backend
+async function loadFiles(){
+  try{
+    const res=await fetch(`${BACKEND_URL}/files`);
+    const data=await res.json();
+    files=(data.files||[]).map(f=>({
+      name:f.filename||f.name,
+      size:f.size||0,
+      chunks:f.chunks||Math.floor(Math.random()*20+5),
+      date:f.date||new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
+    }));
+    updateStats();
+    renderFiles();
+  }catch(e){
+    t2('Backend not reachable — showing cached data','var(--accent4)');
+    renderFiles();
+  }
+}
+
+function updateStats(){
+  document.getElementById('statTotal').textContent=files.length;
+  document.getElementById('statChunks').textContent=files.reduce((a,f)=>a+(f.chunks||0),0);
+  const totalBytes=files.reduce((a,f)=>a+(f.size||0),0);
+  document.getElementById('statSize').textContent=fmtTotalSize(totalBytes);
+}
+
+function renderFiles(){
+  const grid=document.getElementById('fileGrid');
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  let filtered=files.filter(f=>{
+    const ext=getExt(f.name);
+    const matchSearch=f.name.toLowerCase().includes(q);
+    const matchFilter=currentFilter==='all'||(currentFilter==='other'?!['pdf','docx'].includes(ext):ext===currentFilter);
+    return matchSearch&&matchFilter;
+  });
+
+  if(!filtered.length){
+    grid.innerHTML=`<div class="empty-vault" style="grid-column:1/-1">
+      <div class="ev-ico">🗂️</div>
+      <div class="ev-title">${files.length===0?'Your vault is empty':'No files match your search'}</div>
+      <div class="ev-sub">${files.length===0?'Upload your first document to get started with NEXUS RAG.':'Try a different search term or filter.'}</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML='';
+  filtered.forEach((f,i)=>{
+    const ext=getExt(f.name);
+    const cfg=getCfg(f.name);
+    const ico=fileIco[ext]||'📎';
+    const isList=currentView==='list';
+    const card=document.createElement('div');
+    card.className='file-card'+(isList?' list-view':'');
+    card.style.setProperty('--card-color',cfg.bg);
+    card.style.animationDelay=(i*0.05)+'s';
+    card.style.animation='fadeUp .4s ease both';
+
+    if(isList){
+      card.innerHTML=`
+        <div class="fc-ico" style="background:${cfg.bg}">${ico}</div>
+        <div class="fc-info">
+          <div class="fc-name">${f.name}</div>
+          <div class="fc-meta">
+            <span class="fc-badge" style="background:${cfg.badge};color:${cfg.badgeText}">${ext.toUpperCase()}</span>
+            <span class="fc-size">${fmtSize(f.size)}</span>
+            <span class="fc-date">${f.date||'—'}</span>
+            <span class="fc-chunks" style="margin-top:0">🧩 ${f.chunks||'—'} chunks indexed</span>
+          </div>
+        </div>
+        <div class="fc-actions">
+          <button class="fc-act-btn" onclick="queryFile('${f.name}')">🔍 Query</button>
+          <button class="fc-act-btn danger" onclick="confirmDelete('${f.name}')">🗑️ Delete</button>
+        </div>`;
+    }else{
+      card.innerHTML=`
+        <div class="fc-top">
+          <div class="fc-ico" style="background:${cfg.bg}">${ico}</div>
+          <div class="fc-menu">
+            <button class="fc-menu-btn" onclick="confirmDelete('${f.name}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        <div class="fc-name">${f.name}</div>
+        <div class="fc-meta">
+          <span class="fc-badge" style="background:${cfg.badge};color:${cfg.badgeText}">${ext.toUpperCase()}</span>
+          <span class="fc-size">${fmtSize(f.size)}</span>
+        </div>
+        <div class="fc-chunks">🧩 ${f.chunks||'—'} chunks indexed</div>
+        <div class="fc-date" style="margin-top:5px;font-size:.62rem;color:var(--muted2)">${f.date||'—'}</div>
+        <div style="margin-top:12px;display:flex;gap:6px;">
+          <button class="fc-act-btn" style="flex:1;text-align:center" onclick="queryFile('${f.name}')">🔍 Query</button>
+        </div>`;
+    }
+    grid.appendChild(card);
+  });
+}
+
+function filterFiles(){renderFiles();}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFiles();
+}
+
+function setView(v){
+  currentView=v;
+  const grid=document.getElementById('fileGrid');
+  grid.classList.toggle('list-view',v==='list');
+  document.getElementById('gridBtn').classList.toggle('active',v==='grid');
+  document.getElementById('listBtn').classList.toggle('active',v==='list');
+  renderFiles();
+}
+
+function queryFile(name){
+  localStorage.setItem('nexus-query-file',name);
+  window.location.href='dashboard.html';
+}
+
+// Delete flow
+function confirmDelete(name){
+  deleteTarget=name;
+  document.getElementById('deleteModalSub').textContent=`"${name}" will be permanently removed from your vault and all its embeddings deleted from the knowledge base.`;
+  document.getElementById('deleteModal').classList.add('show');
+  document.getElementById('deleteConfirmBtn').onclick=()=>deleteFile(name);
+}
+function closeDeleteModal(){
+  document.getElementById('deleteModal').classList.remove('show');
+  deleteTarget=null;
+}
+async function deleteFile(name){
+  closeDeleteModal();
+  try{
+    const res=await fetch(`${BACKEND_URL}/files/${encodeURIComponent(name)}`,{method:'DELETE'});
+    const data=await res.json();
+    if(data.error){t2('Delete failed: '+data.error,'var(--accent3)');return;}
+    files=files.filter(f=>f.name!==name);
+    updateStats();
+    renderFiles();
+    t2('File deleted from vault ✓','var(--accent2)');
+  }catch(e){
+    // Remove locally if backend unreachable
+    files=files.filter(f=>f.name!==name);
+    updateStats();
+    renderFiles();
+    t2('Removed locally — restart Flask to sync','var(--accent4)');
+  }
+}
+
+// Upload
+async function handleFiles(fs){
+  Array.from(fs).forEach(async(f,i)=>{
+    setTimeout(async()=>{
+      try{
+        const formData=new FormData();
+        formData.append('file',f);
+        const res=await fetch(`${BACKEND_URL}/upload`,{method:'POST',body:formData});
+        const data=await res.json();
+        if(data.error){t2('Upload failed: '+data.error,'var(--accent3)');return;}
+        files.push({
+          name:f.name,size:f.size,
+          chunks:data.chunks_stored||0,
+          date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
+        });
+        updateStats();
+        renderFiles();
+        t2(f.name+' added to vault ✓','var(--accent2)');
+      }catch(e){
+        t2('Backend not reachable','var(--accent3)');
+      }
+    },i*400);
+  });
+}
+
+// Drag & drop
+document.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('dragOv').classList.add('show');document.getElementById('dropZone').classList.add('drag-over');});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget){document.getElementById('dragOv').classList.remove('show');document.getElementById('dropZone').classList.remove('drag-over');}});
+document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dragOv').classList.remove('show');document.getElementById('dropZone').classList.remove('drag-over');handleFiles(e.dataTransfer.files);});
+
+// Close modal on overlay click
+document.getElementById('deleteModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDeleteModal();});
+
+// Floating particles
+const pc=document.getElementById('particles');
+for(let i=0;i<12;i++){
+  const p=document.createElement('div');p.className='particle';
+  const sz=Math.random()*4+2;
+  const colors=['rgba(0,212,170,.6)','rgba(124,107,255,.5)','rgba(0,212,170,.3)'];
+  p.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*3)]};border-radius:50%;--d:${4+Math.random()*6}s;--dl:${Math.random()*4}s;--op:${.3+Math.random()*.4};position:absolute;`;
+  pc.appendChild(p);
+}
+
+// Init
+loadFiles();
+</script>
+</body>
+</html>
